@@ -1,0 +1,32 @@
+{
+  "phase": "phase-0",
+  "files": [
+    ".claude/skills/coding-standards",
+    ".claude/skills/deployment-patterns",
+    ".claude/skills/verification-loop",
+    ".claude/skills/rust-patterns",
+    ".claude/skills/react-patterns",
+    ".claude/agents/architect.md",
+    ".claude/agents/build-error-resolver.md",
+    ".claude/agents/rust-build-resolver.md",
+    ".claude/agents/react-build-resolver.md",
+    ".claude/rules/common/coding-style.md",
+    ".claude/rules/common/development-workflow.md",
+    ".claude/rules/common/git-workflow.md",
+    ".claude/rules/common/hooks.md",
+    ".claude/rules/common/testing.md",
+    ".claude/rules/rust/coding-style.md",
+    ".claude/rules/rust/hooks.md",
+    ".claude/rules/typescript/coding-style.md",
+    ".claude/rules/typescript/hooks.md",
+    ".claude/rules/react/coding-style.md",
+    ".claude/rules/web/coding-style.md",
+    ".claude/commands/project-init.md",
+    ".claude/commands/build-fix.md",
+    ".claude/commands/rust-build.md",
+    ".claude/commands/react-build.md",
+    ".claude/commands/quality-gate.md",
+    ".claude/commands/checkpoint.md"
+  ],
+  "hook_ids": []
+}

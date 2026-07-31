@@ -1,0 +1,125 @@
+name: CI
+
+# Gate order is fixed by Testing.md Section 7 and must not be reordered:
+# cargo fmt -> cargo clippy -> cargo test (coverage) -> eslint -> tsc -> vitest (coverage)
+# -> npm audit / cargo audit -> secret scan -> (main/release only) E2E.
+# Every step runs in one sequential job so a failure blocks everything after it.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history required by the secret-scan step
+
+      # --- Toolchain -----------------------------------------------------------
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libssl-dev libgtk-3-dev build-essential curl wget file
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-audit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # --- Gate 1: cargo fmt ---------------------------------------------------
+      - name: cargo fmt --check
+        working-directory: src-tauri
+        run: cargo fmt --all --check
+
+      # --- Gate 2: cargo clippy ------------------------------------------------
+      - name: cargo clippy -D warnings
+        working-directory: src-tauri
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      # --- Gate 3: cargo test with coverage ------------------------------------
+      # Rules.md 15.1 sets the 80% threshold on services + repositories. The gate is
+      # armed as soon as those directories contain code (Phase 1 onward); before then
+      # there is nothing to measure and the run is report-only, never skipped.
+      - name: cargo test with coverage
+        working-directory: src-tauri
+        run: |
+          if compgen -G "src/services/*.rs" > /dev/null || compgen -G "src/repositories/*.rs" > /dev/null; then
+            cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info --fail-under-lines 80
+          else
+            echo "::notice::No services/ or repositories/ code yet — coverage gate reports only."
+            cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+          fi
+
+      # --- Gate 4: eslint ------------------------------------------------------
+      - name: eslint --max-warnings=0
+        run: npm run lint
+
+      # --- Gate 5: tsc ---------------------------------------------------------
+      - name: tsc --noEmit
+        run: npm run typecheck
+
+      # --- Gate 6: vitest with coverage ---------------------------------------
+      - name: vitest --coverage
+        run: npm run test:coverage
+
+      # --- Gate 7: dependency audits ------------------------------------------
+      # Rules.md 5.2 — no unpatched high/critical CVE may be introduced or remain.
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+      - name: cargo audit
+        working-directory: src-tauri
+        run: cargo audit --deny warnings
+
+      # --- Gate 8: secret scan -------------------------------------------------
+      # Rules.md 10.5 — no secret, key, token or credential in source or git history.
+      - name: Secret scan (gitleaks)
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --redact --verbose --exit-code 1
+
+  e2e:
+    name: End-to-End Suite
+    # Testing.md Section 7 — E2E runs on main/release branches only.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run E2E suite
+        run: |
+          if [ -d tests/e2e ] && [ -n "$(ls -A tests/e2e 2>/dev/null)" ]; then
+            echo "::error::tests/e2e exists but no runner is wired yet."
+            exit 1
+          fi
+          echo "::notice::No E2E specs yet — first scenarios land per Testing.md Section 4."

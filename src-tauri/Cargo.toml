@@ -1,0 +1,32 @@
+[package]
+name = "health-project"
+version = "0.1.0"
+description = "Hospital Information System — secure, offline-first desktop MVP"
+edition = "2021"
+rust-version = "1.77"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+# Rules.md 8.3 — no panics in production code paths.
+# Rules.md 20.3 — complexity ceiling.
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+cognitive_complexity = "warn"
+
+# Rules.md 17.3 — no dead code, no unused imports.
+[lints.rust]
+dead_code = "deny"
+unused_imports = "deny"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

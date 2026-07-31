@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Least-privilege baseline (Rules.md 8.1, Security.md Section 9). The main window is granted only the core webview permissions required to render the app. No filesystem, shell, http, dialog or clipboard permission is granted. Application commands are added here explicitly, one at a time, as each phase introduces them.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

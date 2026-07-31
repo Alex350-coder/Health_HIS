@@ -1,0 +1,13 @@
+npx lint-staged
+
+# DevelopmentWorkflow.md Section 5: Rust gates run pre-commit when a Rust file is staged.
+# If the toolchain is absent the hook says so loudly and defers to CI, which is the hard
+# gate (Testing.md Section 7) — it never silently passes a file that clippy would reject.
+if git diff --cached --name-only --diff-filter=ACM | grep -q '^src-tauri/.*\.rs$'; then
+  if command -v cargo >/dev/null 2>&1; then
+    cargo fmt --manifest-path src-tauri/Cargo.toml --check || exit 1
+    cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings || exit 1
+  else
+    echo "pre-commit: cargo not found — Rust fmt/clippy NOT verified locally; CI will enforce." >&2
+  fi
+fi
