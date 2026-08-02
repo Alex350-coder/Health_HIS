@@ -4,10 +4,5 @@
 #![deny(clippy::unwrap_used, clippy::expect_used)]
 
 fn main() {
-    tauri::Builder::default()
-        .run(tauri::generate_context!())
-        .unwrap_or_else(|error| {
-            eprintln!("fatal: failed to start the Tauri application: {error}");
-            std::process::exit(1);
-        });
+    health_project::run();
 }
