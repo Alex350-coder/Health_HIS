@@ -8,10 +8,20 @@ use super::DbError;
 /// `(filename, sql)` entries here as their migration files are added under `migrations/` —
 /// never edit or remove an existing entry (Rules.md 9.2: migrations are forward-only).
 pub fn embedded_migrations() -> &'static [(&'static str, &'static str)] {
-    &[(
-        "0000_schema_migrations.sql",
-        include_str!("../../migrations/0000_schema_migrations.sql"),
-    )]
+    &[
+        (
+            "0000_schema_migrations.sql",
+            include_str!("../../migrations/0000_schema_migrations.sql"),
+        ),
+        (
+            "0001_init_auth.sql",
+            include_str!("../../migrations/0001_init_auth.sql"),
+        ),
+        (
+            "0002_audit.sql",
+            include_str!("../../migrations/0002_audit.sql"),
+        ),
+    ]
 }
 
 /// Applies every migration in `migrations` that is not yet recorded in `schema_migrations`,
@@ -89,11 +99,13 @@ mod tests {
 
         run_migrations(&conn, embedded_migrations()).unwrap();
 
-        assert_eq!(migration_count(&conn), 1);
+        assert_eq!(migration_count(&conn), 3);
         let version: String = conn
-            .query_row("SELECT version FROM schema_migrations LIMIT 1", [], |row| {
-                row.get(0)
-            })
+            .query_row(
+                "SELECT version FROM schema_migrations ORDER BY version LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
             .unwrap();
         assert_eq!(version, "0000_schema_migrations.sql");
     }
@@ -106,6 +118,65 @@ mod tests {
         run_migrations(&conn, embedded_migrations()).unwrap();
         run_migrations(&conn, embedded_migrations()).unwrap();
 
-        assert_eq!(migration_count(&conn), 1);
+        assert_eq!(migration_count(&conn), 3);
+    }
+
+    /// Rules.md 9.6 — applies every migration to an empty file, then inserts one row into every
+    /// table in migration order, catching forward-referencing foreign key bugs.
+    #[test]
+    fn inserts_one_row_into_every_table_in_migration_order() {
+        let dir = tempdir().unwrap();
+        let conn = connection::open(&dir.path().join("seed.sqlite"), &TEST_KEY).unwrap();
+
+        run_migrations(&conn, embedded_migrations()).unwrap();
+
+        conn.execute(
+            "INSERT INTO users (full_name, username, password_hash, role) \
+             VALUES ('Test Admin', 'test-admin', 'argon2id$dummy', 'admin')",
+            [],
+        )
+        .unwrap();
+        let user_id = conn.last_insert_rowid();
+
+        conn.execute(
+            "INSERT INTO sessions (user_id, token_hash, expires_at) \
+             VALUES (?1, 'dummy-token-hash', datetime('now', '+8 hours'))",
+            [user_id],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO audit_log \
+             (user_id, action, entity_type, entity_id, result, prev_hash, row_hash) \
+             VALUES (?1, 'auth.login', 'user', ?1, 'success', 'GENESIS', 'dummy-row-hash')",
+            [user_id],
+        )
+        .unwrap();
+
+        let audit_count: i64 = conn
+            .query_row("SELECT count(*) FROM audit_log", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(audit_count, 1);
+    }
+
+    #[test]
+    fn audit_log_rejects_update_and_delete() {
+        let dir = tempdir().unwrap();
+        let conn = connection::open(&dir.path().join("append-only.sqlite"), &TEST_KEY).unwrap();
+        run_migrations(&conn, embedded_migrations()).unwrap();
+
+        conn.execute(
+            "INSERT INTO audit_log (action, entity_type, result, prev_hash, row_hash) \
+             VALUES ('auth.login', 'user', 'success', 'GENESIS', 'dummy-row-hash')",
+            [],
+        )
+        .unwrap();
+
+        let update_result =
+            conn.execute("UPDATE audit_log SET action = 'tampered' WHERE id = 1", []);
+        assert!(update_result.is_err());
+
+        let delete_result = conn.execute("DELETE FROM audit_log WHERE id = 1", []);
+        assert!(delete_result.is_err());
     }
 }
