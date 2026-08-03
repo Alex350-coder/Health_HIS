@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-audit-verify-integrity"
+description = "Enables the audit_verify_integrity command without any pre-configured scope."
+commands.allow = ["audit_verify_integrity"]
+
+[[permission]]
+identifier = "deny-audit-verify-integrity"
+description = "Denies the audit_verify_integrity command without any pre-configured scope."
+commands.deny = ["audit_verify_integrity"]
