@@ -32,7 +32,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
-            libssl-dev libgtk-3-dev build-essential curl wget file
+            libgtk-3-dev build-essential curl wget file
+          # No libssl-dev: rusqlite's `bundled-sqlcipher-vendored-openssl` feature (Phase 1)
+          # builds its own OpenSSL from source via openssl-src, needing only a C compiler +
+          # Perl (both already present on ubuntu-latest) — see Architecture.md Section 6.2.
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -93,8 +96,17 @@ jobs:
 
       # --- Gate 7: dependency audits ------------------------------------------
       # Rules.md 5.2 — no unpatched high/critical CVE may be introduced or remain.
-      - name: npm audit
+      # Exception mechanism (Rules.md 5.2): the blocking check is scoped to production
+      # dependencies only (nothing in devDependencies ships in the built artifact). The
+      # full tree, including devDependencies, is still audited in report-only mode below
+      # so a known, documented, unpatched dev-only advisory (see Progress.md Deviations)
+      # never goes silently unchecked.
+      - name: npm audit (production dependencies, blocking)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: npm audit (full tree, report-only)
         run: npm audit --audit-level=high
+        continue-on-error: true
 
       - name: cargo audit
         working-directory: src-tauri
