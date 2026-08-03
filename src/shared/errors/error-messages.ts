@@ -1,4 +1,11 @@
+import { AppErrorException } from './app-error';
+
 import type { AppError } from './app-error';
+
+/** Extracts a display message from a mutation/query `error`, or `undefined` if there is none. */
+export function mutationErrorMessage(error: unknown): string | undefined {
+  return error instanceof AppErrorException ? toUserMessage(error.appError) : undefined;
+}
 
 /**
  * The single place `AppError` values are turned into user-facing text (ErrorHandling.md
