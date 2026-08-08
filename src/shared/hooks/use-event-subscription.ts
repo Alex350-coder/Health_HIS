@@ -13,10 +13,8 @@ export function useEventSubscription(): void {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const eventNames = Object.keys(EVENT_QUERY_MAP);
-    const unlistenPromises = eventNames.map((eventName) =>
+    const unlistenPromises = Object.entries(EVENT_QUERY_MAP).map(([eventName, queryKeys]) =>
       listen(eventName, () => {
-        const queryKeys = EVENT_QUERY_MAP[eventName] ?? [];
         queryKeys.forEach((queryKey) => {
           void queryClient.invalidateQueries({ queryKey });
         });
