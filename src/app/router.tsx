@@ -7,6 +7,8 @@ import {
   redirect,
 } from '@tanstack/react-router';
 
+import { parsePositiveIntParam } from '@shared/lib/route-params';
+
 import { fetchBootstrapStatus } from '@modules/auth/api/auth-queries';
 import { useSessionStore } from '@modules/auth/hooks/use-session-store';
 
@@ -95,6 +97,90 @@ const auditRoute = createRoute({
   component: lazyRouteComponent(() => import('@modules/audit/components/AuditLogPage')),
 });
 
+const facilityRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/facility',
+  component: lazyRouteComponent(() => import('@modules/beds/components/FacilityConfigPage')),
+});
+
+const patientsRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/patients',
+  component: lazyRouteComponent(() => import('@modules/patients/components/PatientListPage')),
+});
+
+const patientsNewRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/patients/new',
+  component: lazyRouteComponent(() => import('@modules/patients/components/PatientCreatePage')),
+});
+
+const patientDetailRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/patients/$patientId',
+  params: {
+    parse: (raw) => ({ patientId: parsePositiveIntParam(raw.patientId) }),
+  },
+  component: lazyRouteComponent(() => import('@modules/patients/components/PatientDetailPage')),
+});
+
+const patientMedicalHistoryRoute = createRoute({
+  getParentRoute: () => patientDetailRoute,
+  path: '/medical-history',
+  component: lazyRouteComponent(
+    () => import('@modules/medical-history/components/MedicalHistoryTab'),
+  ),
+});
+
+const patientBillingRoute = createRoute({
+  getParentRoute: () => patientDetailRoute,
+  path: '/billing',
+  component: lazyRouteComponent(() => import('@modules/billing/components/BillingTab')),
+});
+
+const hospitalMapRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/hospital-map',
+  component: lazyRouteComponent(() => import('@modules/hospital-map/components/HospitalMapPage')),
+});
+
+const bedsRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/beds',
+  component: lazyRouteComponent(() => import('@modules/beds/components/BedListPage')),
+});
+
+const operatingRoomsRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/operating-rooms',
+  component: lazyRouteComponent(() => import('@modules/operating-rooms/components/OrSchedulePage')),
+});
+
+const inventoryRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/inventory',
+  component: lazyRouteComponent(() => import('@modules/inventory/components/InventoryListPage')),
+});
+
+const inventoryItemDetailRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/inventory/$itemId',
+  params: {
+    parse: (raw) => ({ itemId: parsePositiveIntParam(raw.itemId) }),
+  },
+  component: lazyRouteComponent(
+    () => import('@modules/inventory/components/InventoryItemDetailPage'),
+  ),
+});
+
+const notificationsRoute = createRoute({
+  getParentRoute: () => authenticatedLayoutRoute,
+  path: '/notifications',
+  component: lazyRouteComponent(
+    () => import('@modules/notifications/components/NotificationListPage'),
+  ),
+});
+
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '*',
@@ -104,7 +190,21 @@ const notFoundRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   setupRoute,
   loginRoute,
-  authenticatedLayoutRoute.addChildren([indexRoute, usersRoute, auditRoute]),
+  authenticatedLayoutRoute.addChildren([
+    indexRoute,
+    usersRoute,
+    auditRoute,
+    facilityRoute,
+    patientsRoute,
+    patientsNewRoute,
+    patientDetailRoute.addChildren([patientMedicalHistoryRoute, patientBillingRoute]),
+    hospitalMapRoute,
+    bedsRoute,
+    operatingRoomsRoute,
+    inventoryRoute,
+    inventoryItemDetailRoute,
+    notificationsRoute,
+  ]),
   notFoundRoute,
 ]);
 
