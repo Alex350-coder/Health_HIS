@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { ErrorState } from '@shared/ui/ErrorState';
+
 interface ErrorBoundaryProps {
   children: ReactNode;
 }
@@ -31,12 +33,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   override render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div role="alert">
-          <p>Something went wrong.</p>
-          <button type="button" onClick={this.handleReload}>
-            Reload
-          </button>
-        </div>
+        <ErrorState description="Please try reloading this section." onRetry={this.handleReload} />
       );
     }
     return this.props.children;
