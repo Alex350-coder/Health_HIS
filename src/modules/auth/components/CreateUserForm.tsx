@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
-import { FormField } from '@shared/components/FormField';
 import { mutationErrorMessage } from '@shared/errors/error-messages';
+import { FormField } from '@shared/ui/FormField';
 
 import { useCreateUser } from '../api/auth-mutations';
 import { createUserSchema, type CreateUserInput } from '../types/auth-schemas';

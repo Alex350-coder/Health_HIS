@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
-import { FormField } from '@shared/components/FormField';
 import { mutationErrorMessage } from '@shared/errors/error-messages';
+import { FormField } from '@shared/ui/FormField';
 
 import { useBootstrapAdmin } from '../api/auth-mutations';
 import { useSessionStore } from '../hooks/use-session-store';
