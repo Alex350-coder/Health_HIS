@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
-import { mutationErrorMessage } from '@shared/errors/error-messages';
+import { formErrorMessage } from '@shared/errors/error-messages';
 import { FormField } from '@shared/ui/FormField';
 
 import { useCreateUser } from '../api/auth-mutations';
@@ -22,7 +22,7 @@ export function CreateUserForm(): JSX.Element {
     createUser.mutate(input, { onSuccess: () => reset() });
   });
 
-  const errorMessage = mutationErrorMessage(createUser.error);
+  const errorMessage = formErrorMessage(createUser.error);
 
   return (
     <form onSubmit={(event) => void onSubmit(event)} noValidate aria-label="Create a user">

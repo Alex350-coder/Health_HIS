@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ToastRegion } from '@shared/components/ToastRegion';
 import { renderWithQueryClient } from '@shared/test/render-with-query-client';
 
 import { useSessionStore } from '../hooks/use-session-store';
@@ -61,19 +62,25 @@ describe('BootstrapForm', () => {
     });
   });
 
-  it('shows the server error message on a failed bootstrap', async () => {
+  it('shows a toast with the server error message on a failed bootstrap', async () => {
     const user = userEvent.setup();
     mockedInvoke.mockRejectedValueOnce({
       type: 'Conflict',
       message: 'an administrator already exists',
     });
-    renderWithQueryClient(<BootstrapForm />);
+    renderWithQueryClient(
+      <>
+        <BootstrapForm />
+        <ToastRegion />
+      </>,
+    );
 
     await user.type(screen.getByLabelText('Full name'), 'Ada Lovelace');
     await user.type(screen.getByLabelText('Username'), 'ada.admin');
     await user.type(screen.getByLabelText('Password'), 'Sup3r-Secret-Pass');
     await user.click(screen.getByRole('button', { name: 'Create administrator account' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('an administrator already exists');
+    expect(await screen.findByText('an administrator already exists')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
-import { mutationErrorMessage } from '@shared/errors/error-messages';
+import { formErrorMessage } from '@shared/errors/error-messages';
 import { FormField } from '@shared/ui/FormField';
 
 import { useBootstrapAdmin } from '../api/auth-mutations';
@@ -84,7 +84,7 @@ export function BootstrapForm(): JSX.Element {
     });
   });
 
-  const errorMessage = mutationErrorMessage(bootstrapAdmin.error);
+  const errorMessage = formErrorMessage(bootstrapAdmin.error);
 
   return (
     <form

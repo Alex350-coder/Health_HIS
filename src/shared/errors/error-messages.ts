@@ -7,6 +7,28 @@ export function mutationErrorMessage(error: unknown): string | undefined {
   return error instanceof AppErrorException ? toUserMessage(error.appError) : undefined;
 }
 
+const NON_INLINE_ERROR_TYPES = new Set(['Conflict', 'Database', 'AccountLocked']);
+
+/**
+ * Like {@link mutationErrorMessage}, but omits the categories that have their own dedicated
+ * presentation (ErrorHandling.md Section 3): Conflict/Database render as a toast, AccountLocked
+ * as a countdown modal. Forms use this for their inline error banner.
+ */
+export function formErrorMessage(error: unknown): string | undefined {
+  if (!(error instanceof AppErrorException) || NON_INLINE_ERROR_TYPES.has(error.appError.type)) {
+    return undefined;
+  }
+  return toUserMessage(error.appError);
+}
+
+/** Extracts `retryAfterSecs` from an `AccountLocked` error, or `undefined` otherwise. */
+export function accountLockedRetrySecs(error: unknown): number | undefined {
+  if (error instanceof AppErrorException && error.appError.type === 'AccountLocked') {
+    return error.appError.retryAfterSecs;
+  }
+  return undefined;
+}
+
 /**
  * The single place `AppError` values are turned into user-facing text (ErrorHandling.md
  * Section 3). No component formats an `AppError` message itself.
