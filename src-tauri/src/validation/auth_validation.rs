@@ -6,6 +6,7 @@ use serde::Deserialize;
 use validator::{Validate, ValidationError};
 
 use crate::errors::AppError;
+use crate::validation::map_validation_errors;
 
 const VALID_ROLES: [&str; 6] = [
     "physician",
@@ -86,28 +87,6 @@ fn validate_role(role: &str) -> Result<(), ValidationError> {
         Ok(())
     } else {
         Err(ValidationError::new("role_invalid"))
-    }
-}
-
-fn map_validation_errors(errors: validator::ValidationErrors) -> AppError {
-    let field_errors = errors.field_errors();
-    let first = field_errors.iter().next();
-
-    match first {
-        Some((field, errs)) => {
-            let message = errs
-                .first()
-                .map(|error| error.code.to_string())
-                .unwrap_or_else(|| "invalid".to_string());
-            AppError::Validation {
-                field: (*field).to_string(),
-                message,
-            }
-        }
-        None => AppError::Validation {
-            field: "unknown".to_string(),
-            message: "invalid".to_string(),
-        },
     }
 }
 
