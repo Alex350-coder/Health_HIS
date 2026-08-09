@@ -11,6 +11,7 @@
 
 pub mod audit_commands;
 pub mod auth_commands;
+pub mod patient_commands;
 
 use std::sync::{Mutex, MutexGuard};
 
