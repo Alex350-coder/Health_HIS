@@ -5,6 +5,7 @@
 pub mod commands;
 pub mod db;
 pub mod errors;
+pub mod events;
 pub mod models;
 pub mod repositories;
 pub mod security;
@@ -38,6 +39,10 @@ pub fn run() {
             commands::auth_commands::auth_deactivate_user,
             commands::audit_commands::audit_list,
             commands::audit_commands::audit_verify_integrity,
+            commands::patient_commands::patients_create,
+            commands::patient_commands::patients_update,
+            commands::patient_commands::patients_get,
+            commands::patient_commands::patients_list,
         ])
         .setup(|app| {
             let data_dir = app

@@ -30,8 +30,8 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     );
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong.');
-    expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
 
     vi.restoreAllMocks();
   });
@@ -56,7 +56,7 @@ describe('ErrorBoundary', () => {
     );
     shouldThrow = false;
 
-    await user.click(screen.getByRole('button', { name: 'Reload' }));
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
     rerender(
       <ErrorBoundary>
         <MaybeBomb />

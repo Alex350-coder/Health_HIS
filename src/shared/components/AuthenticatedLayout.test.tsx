@@ -37,13 +37,26 @@ async function renderLayout(
 }
 
 describe('AuthenticatedLayout', () => {
-  it('renders the nav links, user name and children', async () => {
+  it('renders the primary and admin nav links, user name and children', async () => {
     await renderLayout();
 
     expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Users' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Patients' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Hospital Map' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Beds' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Operating Rooms' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Inventory' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Notifications' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Audit' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Facility' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Users' })).toBeInTheDocument();
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+  });
+
+  it('renders a notification bell with an unread-count stub', async () => {
+    await renderLayout();
+
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
   });
 
   it('calls onLogout when the logout button is clicked', async () => {

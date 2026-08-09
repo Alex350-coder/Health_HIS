@@ -57,7 +57,7 @@ describe('LoginForm', () => {
     });
   });
 
-  it('shows the server error message on a failed login', async () => {
+  it('shows an account-locked countdown dialog on a failed login', async () => {
     const user = userEvent.setup();
     mockedInvoke.mockRejectedValueOnce({ type: 'AccountLocked', retryAfterSecs: 60 });
     renderWithQueryClient(<LoginForm />);
@@ -66,9 +66,8 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('Password'), 'wrong-password');
     await user.click(screen.getByRole('button', { name: 'Log in' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Too many failed attempts. Try again in 1 minute(s).',
-    );
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Try again in 60 seconds.');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(useSessionStore.getState().token).toBeNull();
   });
 });
