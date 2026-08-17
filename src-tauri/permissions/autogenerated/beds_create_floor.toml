@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-beds-create-floor"
+description = "Enables the beds_create_floor command without any pre-configured scope."
+commands.allow = ["beds_create_floor"]
+
+[[permission]]
+identifier = "deny-beds-create-floor"
+description = "Denies the beds_create_floor command without any pre-configured scope."
+commands.deny = ["beds_create_floor"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-hospital-map-get-layout"
+description = "Enables the hospital_map_get_layout command without any pre-configured scope."
+commands.allow = ["hospital_map_get_layout"]
+
+[[permission]]
+identifier = "deny-hospital-map-get-layout"
+description = "Denies the hospital_map_get_layout command without any pre-configured scope."
+commands.deny = ["hospital_map_get_layout"]
