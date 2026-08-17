@@ -1,4 +1,5 @@
 pub mod auth_validation;
+pub mod bed_validation;
 pub mod medical_history_validation;
 pub mod patient_validation;
 
