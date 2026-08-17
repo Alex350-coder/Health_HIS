@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-patients-update"
+description = "Enables the patients_update command without any pre-configured scope."
+commands.allow = ["patients_update"]
+
+[[permission]]
+identifier = "deny-patients-update"
+description = "Denies the patients_update command without any pre-configured scope."
+commands.deny = ["patients_update"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-medical-history-create-diagnosis"
+description = "Enables the medical_history_create_diagnosis command without any pre-configured scope."
+commands.allow = ["medical_history_create_diagnosis"]
+
+[[permission]]
+identifier = "deny-medical-history-create-diagnosis"
+description = "Denies the medical_history_create_diagnosis command without any pre-configured scope."
+commands.deny = ["medical_history_create_diagnosis"]
