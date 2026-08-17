@@ -29,6 +29,10 @@ pub fn embedded_migrations() -> &'static [(&'static str, &'static str)] {
             "0004_medical_history.sql",
             include_str!("../../migrations/0004_medical_history.sql"),
         ),
+        (
+            "0005_hospital_map_beds.sql",
+            include_str!("../../migrations/0005_hospital_map_beds.sql"),
+        ),
     ]
 }
 
