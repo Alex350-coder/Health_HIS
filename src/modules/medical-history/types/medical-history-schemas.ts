@@ -6,6 +6,12 @@ import { z } from 'zod';
  * exists for immediate UX feedback only.
  */
 
+const optionalText = (maxLength: number, message: string) =>
+  z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().max(maxLength, message).optional(),
+  );
+
 export const createEncounterSchema = z.object({
   patientId: z.number().int().positive(),
 });
@@ -14,11 +20,7 @@ export type CreateEncounterInput = z.infer<typeof createEncounterSchema>;
 
 export const dischargeEncounterSchema = z.object({
   encounterId: z.number().int().positive(),
-  dischargeSummary: z
-    .string()
-    .max(4000, 'Discharge summary is too long.')
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
+  dischargeSummary: optionalText(4000, 'Discharge summary is too long.'),
 });
 
 export type DischargeEncounterInput = z.infer<typeof dischargeEncounterSchema>;
@@ -28,11 +30,7 @@ export type DischargeEncounterFormValues = z.input<typeof dischargeEncounterSche
 export const createDiagnosisSchema = z.object({
   encounterId: z.number().int().positive(),
   description: z.string().min(1, 'Description is required.').max(2000, 'Description is too long.'),
-  icdCode: z
-    .string()
-    .max(20, 'ICD code is too long.')
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
+  icdCode: optionalText(20, 'ICD code is too long.'),
   correctsDiagnosisId: z.number().int().positive().optional(),
 });
 
@@ -44,11 +42,7 @@ export const createTreatmentSchema = z.object({
   encounterId: z.number().int().positive(),
   diagnosisId: z.number().int().positive().optional(),
   description: z.string().min(1, 'Description is required.').max(2000, 'Description is too long.'),
-  dosage: z
-    .string()
-    .max(200, 'Dosage is too long.')
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
+  dosage: optionalText(200, 'Dosage is too long.'),
   correctsTreatmentId: z.number().int().positive().optional(),
 });
 
