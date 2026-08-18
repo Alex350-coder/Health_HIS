@@ -19,6 +19,15 @@ const COMMANDS: &[&str] = &[
     "medical_history_create_diagnosis",
     "medical_history_create_treatment",
     "medical_history_create_evolution",
+    "hospital_map_get_layout",
+    "hospital_map_get_room_status",
+    "beds_create_floor",
+    "beds_create_room",
+    "beds_create",
+    "beds_set_status",
+    "beds_list",
+    "beds_assign",
+    "beds_release",
 ];
 
 fn main() {

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-hospital-map-get-room-status"
+description = "Enables the hospital_map_get_room_status command without any pre-configured scope."
+commands.allow = ["hospital_map_get_room_status"]
+
+[[permission]]
+identifier = "deny-hospital-map-get-room-status"
+description = "Denies the hospital_map_get_room_status command without any pre-configured scope."
+commands.deny = ["hospital_map_get_room_status"]

@@ -24,6 +24,15 @@
     "allow-medical-history-get-by-patient",
     "allow-medical-history-create-diagnosis",
     "allow-medical-history-create-treatment",
-    "allow-medical-history-create-evolution"
+    "allow-medical-history-create-evolution",
+    "allow-hospital-map-get-layout",
+    "allow-hospital-map-get-room-status",
+    "allow-beds-create-floor",
+    "allow-beds-create-room",
+    "allow-beds-create",
+    "allow-beds-set-status",
+    "allow-beds-list",
+    "allow-beds-assign",
+    "allow-beds-release"
   ]
 }

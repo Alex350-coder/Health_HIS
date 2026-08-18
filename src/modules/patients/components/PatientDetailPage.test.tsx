@@ -6,12 +6,15 @@ import { renderWithQueryClient } from '@shared/test/render-with-query-client';
 
 import PatientDetailPage from './PatientDetailPage';
 
+import type { ReactNode } from 'react';
+
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 
 vi.mock('@tanstack/react-router', () => ({
   useParams: () => ({ patientId: 1 }),
   useNavigate: () => vi.fn(),
   Outlet: () => null,
+  Link: ({ children }: { children: ReactNode }) => children,
 }));
 
 const mockedInvoke = vi.mocked(invoke);

@@ -49,6 +49,15 @@ pub fn run() {
             commands::medical_history_commands::medical_history_create_diagnosis,
             commands::medical_history_commands::medical_history_create_treatment,
             commands::medical_history_commands::medical_history_create_evolution,
+            commands::hospital_map_commands::hospital_map_get_layout,
+            commands::hospital_map_commands::hospital_map_get_room_status,
+            commands::bed_commands::beds_create_floor,
+            commands::bed_commands::beds_create_room,
+            commands::bed_commands::beds_create,
+            commands::bed_commands::beds_set_status,
+            commands::bed_commands::beds_list,
+            commands::bed_commands::beds_assign,
+            commands::bed_commands::beds_release,
         ])
         .setup(|app| {
             let data_dir = app

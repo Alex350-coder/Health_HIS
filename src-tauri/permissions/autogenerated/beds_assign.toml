@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-beds-assign"
+description = "Enables the beds_assign command without any pre-configured scope."
+commands.allow = ["beds_assign"]
+
+[[permission]]
+identifier = "deny-beds-assign"
+description = "Denies the beds_assign command without any pre-configured scope."
+commands.deny = ["beds_assign"]
