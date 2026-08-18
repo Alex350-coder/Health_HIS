@@ -8,11 +8,12 @@ use rusqlite::Connection;
 use crate::db::DbError;
 use crate::errors::app_error::correlation_id;
 use crate::errors::AppError;
-use crate::models::{Bed, Floor, Room};
-use crate::repositories::bed_repository::{self, NewBed, NewFloor, NewRoom};
+use crate::models::{Bed, BedAssignment, BedSummary, Floor, Room};
+use crate::repositories::bed_repository::{self, NewAssignment, NewBed, NewFloor, NewRoom};
 use crate::services::audit_service::{self, RecordInput};
 use crate::validation::bed_validation::{
-    self, CreateBedInput, CreateFloorInput, CreateRoomInput, SetBedStatusInput,
+    self, AssignBedInput, CreateBedInput, CreateFloorInput, CreateRoomInput, ReleaseBedInput,
+    SetBedStatusInput,
 };
 
 pub fn create_floor(
@@ -145,6 +146,104 @@ pub fn set_status(
     tx.commit().map_err(DbError::from)?;
 
     Ok(bed)
+}
+
+pub fn list(conn: &Connection, room_id: Option<i64>) -> Result<Vec<BedSummary>, AppError> {
+    Ok(bed_repository::list_beds_with_active_assignment(
+        conn, room_id,
+    )?)
+}
+
+/// Enforces the bed-availability business rule (Database.md Section 3.3): a bed may have at
+/// most one active assignment. Checked explicitly here rather than inferred from the partial
+/// unique index violation, since `AppError::from(DbError)` maps every DB error generically.
+pub fn assign(
+    conn: &mut Connection,
+    actor_user_id: i64,
+    input: &AssignBedInput,
+) -> Result<BedAssignment, AppError> {
+    bed_validation::validate_assign_bed(input)?;
+
+    let tx = conn.transaction().map_err(DbError::from)?;
+    bed_repository::find_bed_by_id(&tx, input.bed_id)?.ok_or(AppError::NotFound {
+        entity: "bed".to_string(),
+        id: input.bed_id,
+    })?;
+    if bed_repository::find_active_assignment_by_bed_id(&tx, input.bed_id)?.is_some() {
+        return Err(AppError::Conflict {
+            message: "bed is already occupied".to_string(),
+        });
+    }
+
+    let assignment_id = bed_repository::insert_assignment(
+        &tx,
+        &NewAssignment {
+            bed_id: input.bed_id,
+            patient_id: input.patient_id,
+            encounter_id: input.encounter_id,
+            assigned_by_user_id: actor_user_id,
+        },
+    )?;
+    bed_repository::update_bed_status(&tx, input.bed_id, "occupied")?;
+    audit_service::record(
+        &tx,
+        &RecordInput {
+            user_id: Some(actor_user_id),
+            action: "bed.assign",
+            entity_type: "bed_assignment",
+            entity_id: Some(assignment_id),
+            before_state: None,
+            after_state: None,
+            result: "success",
+        },
+    )?;
+    tx.commit().map_err(DbError::from)?;
+
+    find_assignment_or_die(conn, assignment_id)
+}
+
+pub fn release(
+    conn: &mut Connection,
+    actor_user_id: i64,
+    input: &ReleaseBedInput,
+) -> Result<BedAssignment, AppError> {
+    bed_validation::validate_release_bed(input)?;
+
+    let tx = conn.transaction().map_err(DbError::from)?;
+    let assignment = bed_repository::find_assignment_by_id(&tx, input.bed_assignment_id)?.ok_or(
+        AppError::NotFound {
+            entity: "bed_assignment".to_string(),
+            id: input.bed_assignment_id,
+        },
+    )?;
+    if assignment.released_at.is_some() {
+        return Err(AppError::Conflict {
+            message: "bed assignment is already released".to_string(),
+        });
+    }
+
+    bed_repository::release_assignment(&tx, input.bed_assignment_id)?;
+    bed_repository::update_bed_status(&tx, assignment.bed_id, "available")?;
+    audit_service::record(
+        &tx,
+        &RecordInput {
+            user_id: Some(actor_user_id),
+            action: "bed.release",
+            entity_type: "bed_assignment",
+            entity_id: Some(input.bed_assignment_id),
+            before_state: None,
+            after_state: None,
+            result: "success",
+        },
+    )?;
+    tx.commit().map_err(DbError::from)?;
+
+    find_assignment_or_die(conn, input.bed_assignment_id)
+}
+
+fn find_assignment_or_die(conn: &Connection, id: i64) -> Result<BedAssignment, AppError> {
+    bed_repository::find_assignment_by_id(conn, id)?
+        .ok_or_else(|| unexpected_vanished("bed_assignment", id))
 }
 
 fn require_floor_exists(conn: &Connection, floor_id: i64) -> Result<(), AppError> {
@@ -351,6 +450,240 @@ mod tests {
             &SetBedStatusInput {
                 bed_id: bed.id,
                 status: "maintenance".to_string(),
+            },
+        )
+        .unwrap();
+
+        let verification = audit_service::verify_chain(&conn).unwrap();
+        assert!(verification.is_valid);
+    }
+
+    fn seed_patient(conn: &Connection) -> i64 {
+        conn.execute(
+            "INSERT INTO patients (medical_record_number, full_name, date_of_birth, sex) \
+             VALUES ('MRN-1', 'Jane Doe', '1990-01-01', 'female')",
+            [],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    fn seed_encounter(conn: &Connection, patient_id: i64) -> i64 {
+        conn.execute(
+            "INSERT INTO encounters (patient_id, created_by_user_id) VALUES (?1, ?2)",
+            rusqlite::params![patient_id, ACTOR_USER_ID],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    fn setup_bed(conn: &mut Connection) -> (i64, i64, i64) {
+        let floor = create_floor(conn, ACTOR_USER_ID, &create_floor_input()).unwrap();
+        let room = create_room(conn, ACTOR_USER_ID, &create_room_input(floor.id)).unwrap();
+        let bed = create_bed(conn, ACTOR_USER_ID, &create_bed_input(room.id)).unwrap();
+        let patient_id = seed_patient(conn);
+        let encounter_id = seed_encounter(conn, patient_id);
+        (bed.id, patient_id, encounter_id)
+    }
+
+    #[test]
+    fn assign_persists_sets_bed_occupied_and_writes_an_audit_row() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let (bed_id, patient_id, encounter_id) = setup_bed(&mut conn);
+
+        let assignment = assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id,
+                patient_id,
+                encounter_id,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(assignment.bed_id, bed_id);
+        let bed = bed_repository::find_bed_by_id(&conn, bed_id)
+            .unwrap()
+            .unwrap();
+        assert_eq!(bed.status, "occupied");
+        let rows = audit_repository::list_all_ordered(&conn).unwrap();
+        assert!(rows.iter().any(|row| row.action == "bed.assign"));
+    }
+
+    #[test]
+    fn assign_a_bed_already_occupied_returns_conflict() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let (bed_id, patient_id, encounter_id) = setup_bed(&mut conn);
+        assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id,
+                patient_id,
+                encounter_id,
+            },
+        )
+        .unwrap();
+
+        let result = assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id,
+                patient_id,
+                encounter_id,
+            },
+        );
+
+        assert!(matches!(result, Err(AppError::Conflict { .. })));
+    }
+
+    #[test]
+    fn assign_a_nonexistent_bed_returns_not_found() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let patient_id = seed_patient(&conn);
+        let encounter_id = seed_encounter(&conn, patient_id);
+
+        let result = assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id: 999,
+                patient_id,
+                encounter_id,
+            },
+        );
+
+        assert!(matches!(result, Err(AppError::NotFound { .. })));
+    }
+
+    #[test]
+    fn release_then_reassign_succeeds() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let (bed_id, patient_id, encounter_id) = setup_bed(&mut conn);
+        let assignment = assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id,
+                patient_id,
+                encounter_id,
+            },
+        )
+        .unwrap();
+
+        let released = release(
+            &mut conn,
+            ACTOR_USER_ID,
+            &ReleaseBedInput {
+                bed_assignment_id: assignment.id,
+            },
+        )
+        .unwrap();
+        assert!(released.released_at.is_some());
+        let bed = bed_repository::find_bed_by_id(&conn, bed_id)
+            .unwrap()
+            .unwrap();
+        assert_eq!(bed.status, "available");
+
+        let reassigned = assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id,
+                patient_id,
+                encounter_id,
+            },
+        )
+        .unwrap();
+        assert_eq!(reassigned.bed_id, bed_id);
+
+        let rows = audit_repository::list_all_ordered(&conn).unwrap();
+        assert!(rows.iter().any(|row| row.action == "bed.release"));
+    }
+
+    #[test]
+    fn release_an_already_released_assignment_returns_conflict() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let (bed_id, patient_id, encounter_id) = setup_bed(&mut conn);
+        let assignment = assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id,
+                patient_id,
+                encounter_id,
+            },
+        )
+        .unwrap();
+        release(
+            &mut conn,
+            ACTOR_USER_ID,
+            &ReleaseBedInput {
+                bed_assignment_id: assignment.id,
+            },
+        )
+        .unwrap();
+
+        let result = release(
+            &mut conn,
+            ACTOR_USER_ID,
+            &ReleaseBedInput {
+                bed_assignment_id: assignment.id,
+            },
+        );
+
+        assert!(matches!(result, Err(AppError::Conflict { .. })));
+    }
+
+    #[test]
+    fn list_reflects_active_assignment_linkage() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let (bed_id, patient_id, encounter_id) = setup_bed(&mut conn);
+        assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id,
+                patient_id,
+                encounter_id,
+            },
+        )
+        .unwrap();
+
+        let summaries = list(&conn, None).unwrap();
+
+        let summary = summaries.iter().find(|s| s.bed.id == bed_id).unwrap();
+        assert!(summary.active_assignment.is_some());
+    }
+
+    #[test]
+    fn the_audit_chain_stays_valid_after_an_assign_release_sequence() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let (bed_id, patient_id, encounter_id) = setup_bed(&mut conn);
+        let assignment = assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id,
+                patient_id,
+                encounter_id,
+            },
+        )
+        .unwrap();
+        release(
+            &mut conn,
+            ACTOR_USER_ID,
+            &ReleaseBedInput {
+                bed_assignment_id: assignment.id,
             },
         )
         .unwrap();
