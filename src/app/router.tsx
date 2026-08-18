@@ -138,6 +138,12 @@ const patientBillingRoute = createRoute({
   component: lazyRouteComponent(() => import('@modules/billing/components/BillingTab')),
 });
 
+const patientBedsRoute = createRoute({
+  getParentRoute: () => patientDetailRoute,
+  path: '/beds',
+  component: lazyRouteComponent(() => import('@modules/beds/components/PatientBedTab')),
+});
+
 const hospitalMapRoute = createRoute({
   getParentRoute: () => authenticatedLayoutRoute,
   path: '/hospital-map',
@@ -197,7 +203,11 @@ const routeTree = rootRoute.addChildren([
     facilityRoute,
     patientsRoute,
     patientsNewRoute,
-    patientDetailRoute.addChildren([patientMedicalHistoryRoute, patientBillingRoute]),
+    patientDetailRoute.addChildren([
+      patientMedicalHistoryRoute,
+      patientBedsRoute,
+      patientBillingRoute,
+    ]),
     hospitalMapRoute,
     bedsRoute,
     operatingRoomsRoute,
