@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-patients-list"
+description = "Enables the patients_list command without any pre-configured scope."
+commands.allow = ["patients_list"]
+
+[[permission]]
+identifier = "deny-patients-list"
+description = "Denies the patients_list command without any pre-configured scope."
+commands.deny = ["patients_list"]

@@ -1,0 +1,101 @@
+import { useState } from 'react';
+
+import { Badge } from '@shared/ui/Badge';
+import { Button } from '@shared/ui/Button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@shared/ui/Card';
+
+import { DiagnosisForm } from './DiagnosisForm';
+import { DiagnosisList } from './DiagnosisList';
+import { DischargeForm } from './DischargeForm';
+import { EvolutionForm } from './EvolutionForm';
+import { EvolutionList } from './EvolutionList';
+import { TreatmentForm } from './TreatmentForm';
+import { TreatmentList } from './TreatmentList';
+
+import type { Diagnosis, Encounter, Evolution, Treatment } from '../types/medical-history-schemas';
+
+interface EncounterPanelProps {
+  encounter: Encounter;
+  diagnoses: Diagnosis[];
+  treatments: Treatment[];
+  evolutions: Evolution[];
+}
+
+/** Timeline + inline forms for the currently open encounter. */
+export function EncounterPanel({
+  encounter,
+  diagnoses,
+  treatments,
+  evolutions,
+}: EncounterPanelProps): JSX.Element {
+  const [isDischarging, setIsDischarging] = useState(false);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>
+          Open encounter — admitted {new Date(encounter.admittedAt).toLocaleString()}
+        </CardTitle>
+        <Badge>{encounter.status}</Badge>
+      </CardHeader>
+      <EncounterTimeline
+        encounter={encounter}
+        diagnoses={diagnoses}
+        treatments={treatments}
+        evolutions={evolutions}
+      />
+      <CardFooter>
+        {isDischarging ? (
+          <DischargeForm encounterId={encounter.id} onDone={() => setIsDischarging(false)} />
+        ) : (
+          <Button intent="danger" size="sm" onClick={() => setIsDischarging(true)}>
+            Discharge
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
+
+function EncounterTimeline({
+  encounter,
+  diagnoses,
+  treatments,
+  evolutions,
+}: EncounterPanelProps): JSX.Element {
+  return (
+    <CardContent className="flex flex-col gap-6">
+      <EncounterSection title="Diagnoses">
+        <DiagnosisList diagnoses={diagnoses} />
+        <DiagnosisForm encounterId={encounter.id} existingDiagnoses={diagnoses} />
+      </EncounterSection>
+      <EncounterSection title="Treatments">
+        <TreatmentList treatments={treatments} />
+        <TreatmentForm
+          encounterId={encounter.id}
+          existingDiagnoses={diagnoses}
+          existingTreatments={treatments}
+        />
+      </EncounterSection>
+      <EncounterSection title="Evolution notes">
+        <EvolutionList evolutions={evolutions} />
+        <EvolutionForm encounterId={encounter.id} />
+      </EncounterSection>
+    </CardContent>
+  );
+}
+
+function EncounterSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="text-base font-semibold text-text-primary">{title}</h3>
+      {children}
+    </section>
+  );
+}

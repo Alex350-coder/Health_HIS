@@ -25,6 +25,10 @@ pub fn embedded_migrations() -> &'static [(&'static str, &'static str)] {
             "0003_patients_encounters.sql",
             include_str!("../../migrations/0003_patients_encounters.sql"),
         ),
+        (
+            "0004_medical_history.sql",
+            include_str!("../../migrations/0004_medical_history.sql"),
+        ),
     ]
 }
 
@@ -103,7 +107,7 @@ mod tests {
 
         run_migrations(&conn, embedded_migrations()).unwrap();
 
-        assert_eq!(migration_count(&conn), 4);
+        assert_eq!(migration_count(&conn), 5);
         let version: String = conn
             .query_row(
                 "SELECT version FROM schema_migrations ORDER BY version LIMIT 1",
@@ -122,7 +126,7 @@ mod tests {
         run_migrations(&conn, embedded_migrations()).unwrap();
         run_migrations(&conn, embedded_migrations()).unwrap();
 
-        assert_eq!(migration_count(&conn), 4);
+        assert_eq!(migration_count(&conn), 5);
     }
 
     /// Rules.md 9.6 — applies every migration to an empty file, then inserts one row into every

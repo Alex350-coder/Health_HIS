@@ -43,6 +43,12 @@ pub fn run() {
             commands::patient_commands::patients_update,
             commands::patient_commands::patients_get,
             commands::patient_commands::patients_list,
+            commands::medical_history_commands::medical_history_create_encounter,
+            commands::medical_history_commands::medical_history_discharge_encounter,
+            commands::medical_history_commands::medical_history_get_by_patient,
+            commands::medical_history_commands::medical_history_create_diagnosis,
+            commands::medical_history_commands::medical_history_create_treatment,
+            commands::medical_history_commands::medical_history_create_evolution,
         ])
         .setup(|app| {
             let data_dir = app

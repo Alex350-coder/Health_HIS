@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-patients-create"
+description = "Enables the patients_create command without any pre-configured scope."
+commands.allow = ["patients_create"]
+
+[[permission]]
+identifier = "deny-patients-create"
+description = "Denies the patients_create command without any pre-configured scope."
+commands.deny = ["patients_create"]

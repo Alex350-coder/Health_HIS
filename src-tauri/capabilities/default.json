@@ -14,6 +14,16 @@
     "allow-auth-list-users",
     "allow-auth-deactivate-user",
     "allow-audit-list",
-    "allow-audit-verify-integrity"
+    "allow-audit-verify-integrity",
+    "allow-patients-create",
+    "allow-patients-update",
+    "allow-patients-get",
+    "allow-patients-list",
+    "allow-medical-history-create-encounter",
+    "allow-medical-history-discharge-encounter",
+    "allow-medical-history-get-by-patient",
+    "allow-medical-history-create-diagnosis",
+    "allow-medical-history-create-treatment",
+    "allow-medical-history-create-evolution"
   ]
 }

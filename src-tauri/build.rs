@@ -9,6 +9,16 @@ const COMMANDS: &[&str] = &[
     "auth_deactivate_user",
     "audit_list",
     "audit_verify_integrity",
+    "patients_create",
+    "patients_update",
+    "patients_get",
+    "patients_list",
+    "medical_history_create_encounter",
+    "medical_history_discharge_encounter",
+    "medical_history_get_by_patient",
+    "medical_history_create_diagnosis",
+    "medical_history_create_treatment",
+    "medical_history_create_evolution",
 ];
 
 fn main() {
