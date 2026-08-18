@@ -3,11 +3,14 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import { callCommand } from '@shared/lib/api-client';
 
 import type {
+  AssignBedInput,
   Bed,
+  BedAssignment,
   CreateBedInput,
   CreateFloorInput,
   CreateRoomInput,
   Floor,
+  ReleaseBedInput,
   Room,
   SetBedStatusInput,
 } from '../types/bed-schemas';
@@ -52,6 +55,30 @@ export function useSetBedStatus(): UseMutationResult<Bed, unknown, SetBedStatusI
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['beds'] });
       void queryClient.invalidateQueries({ queryKey: ['hospital-map', 'layout'] });
+    },
+  });
+}
+
+export function useAssignBed(): UseMutationResult<BedAssignment, unknown, AssignBedInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AssignBedInput) => callCommand<BedAssignment>('beds_assign', { input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['beds'] });
+      void queryClient.invalidateQueries({ queryKey: ['hospital-map', 'layout'] });
+      void queryClient.invalidateQueries({ queryKey: ['medical-history'] });
+    },
+  });
+}
+
+export function useReleaseBed(): UseMutationResult<BedAssignment, unknown, ReleaseBedInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ReleaseBedInput) => callCommand<BedAssignment>('beds_release', { input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['beds'] });
+      void queryClient.invalidateQueries({ queryKey: ['hospital-map', 'layout'] });
+      void queryClient.invalidateQueries({ queryKey: ['medical-history'] });
     },
   });
 }

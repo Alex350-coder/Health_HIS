@@ -84,3 +84,38 @@ export interface Bed {
   createdAt: string;
   updatedAt: string | null;
 }
+
+export interface BedAssignment {
+  id: number;
+  bedId: number;
+  patientId: number;
+  encounterId: number;
+  assignedAt: string;
+  releasedAt: string | null;
+}
+
+export interface ActiveAssignmentRef {
+  id: number;
+  patientId: number;
+  encounterId: number;
+}
+
+export interface BedSummary extends Bed {
+  activeAssignment: ActiveAssignmentRef | null;
+}
+
+export const assignBedSchema = z.object({
+  bedId: z.coerce.number().int().positive('A bed must be selected.'),
+  patientId: z.coerce.number().int().positive(),
+  encounterId: z.coerce.number().int().positive('An open encounter is required.'),
+});
+
+export type AssignBedInput = z.infer<typeof assignBedSchema>;
+export type AssignBedFormValues = z.input<typeof assignBedSchema>;
+
+export const releaseBedSchema = z.object({
+  bedAssignmentId: z.coerce.number().int().positive(),
+});
+
+export type ReleaseBedInput = z.infer<typeof releaseBedSchema>;
+export type ReleaseBedFormValues = z.input<typeof releaseBedSchema>;

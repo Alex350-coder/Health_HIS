@@ -17,4 +17,6 @@ export const EVENT_QUERY_MAP: Record<string, QueryKey[]> = {
   'medical-history:treatment:created': [['medical-history']],
   'medical-history:evolution:created': [['medical-history']],
   'beds:facility:changed': [['beds'], ['hospital-map', 'layout']],
+  'beds:assignment:created': [['beds'], ['hospital-map', 'layout'], ['medical-history']],
+  'beds:assignment:released': [['beds'], ['hospital-map', 'layout'], ['medical-history']],
 };

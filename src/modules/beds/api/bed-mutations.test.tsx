@@ -3,14 +3,24 @@ import { invoke } from '@tauri-apps/api/core';
 import { renderHook, act } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useCreateBed, useCreateFloor, useCreateRoom, useSetBedStatus } from './bed-mutations';
+import {
+  useAssignBed,
+  useCreateBed,
+  useCreateFloor,
+  useCreateRoom,
+  useReleaseBed,
+  useSetBedStatus,
+} from './bed-mutations';
 
 import type {
+  AssignBedInput,
   Bed,
+  BedAssignment,
   CreateBedInput,
   CreateFloorInput,
   CreateRoomInput,
   Floor,
+  ReleaseBedInput,
   Room,
   SetBedStatusInput,
 } from '../types/bed-schemas';
@@ -108,5 +118,45 @@ describe('bed-mutations', () => {
     });
 
     expect(mockedInvoke).toHaveBeenCalledWith('beds_set_status', { input });
+  });
+
+  it('useAssignBed calls beds_assign with the input', async () => {
+    const input: AssignBedInput = { bedId: 1, patientId: 1, encounterId: 1 };
+    const assignment: BedAssignment = {
+      id: 1,
+      bedId: 1,
+      patientId: 1,
+      encounterId: 1,
+      assignedAt: '2026-01-01T00:00:00Z',
+      releasedAt: null,
+    };
+    mockedInvoke.mockResolvedValueOnce(assignment);
+    const { result } = renderHook(() => useAssignBed(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync(input);
+    });
+
+    expect(mockedInvoke).toHaveBeenCalledWith('beds_assign', { input });
+  });
+
+  it('useReleaseBed calls beds_release with the input', async () => {
+    const input: ReleaseBedInput = { bedAssignmentId: 1 };
+    const assignment: BedAssignment = {
+      id: 1,
+      bedId: 1,
+      patientId: 1,
+      encounterId: 1,
+      assignedAt: '2026-01-01T00:00:00Z',
+      releasedAt: '2026-01-02T00:00:00Z',
+    };
+    mockedInvoke.mockResolvedValueOnce(assignment);
+    const { result } = renderHook(() => useReleaseBed(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync(input);
+    });
+
+    expect(mockedInvoke).toHaveBeenCalledWith('beds_release', { input });
   });
 });

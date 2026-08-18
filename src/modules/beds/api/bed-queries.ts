@@ -2,7 +2,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { callCommand } from '@shared/lib/api-client';
 
-import type { Bed, Floor, Room } from '../types/bed-schemas';
+import type { Bed, BedSummary, Floor, Room } from '../types/bed-schemas';
 
 /**
  * Beds owns the write path for floors/rooms/beds but reads the same read-only commands the
@@ -34,5 +34,12 @@ export function useFacilityRoomStatus(roomId: number | null): UseQueryResult<Fac
     queryKey: ['beds', 'facility-room-status', roomId],
     queryFn: () => callCommand<FacilityRoomStatus>('hospital_map_get_room_status', { roomId }),
     enabled: roomId !== null,
+  });
+}
+
+export function useBedsList(roomId?: number | null): UseQueryResult<BedSummary[]> {
+  return useQuery({
+    queryKey: ['beds', 'list', roomId ?? null],
+    queryFn: () => callCommand<BedSummary[]>('beds_list', { roomId: roomId ?? null }),
   });
 }
