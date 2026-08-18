@@ -6,7 +6,9 @@
 use rusqlite::{params, Connection, OptionalExtension, Row};
 
 use crate::db::DbError;
-use crate::models::{Bed, Floor, FloorLayout, Room, RoomStatus};
+use crate::models::{
+    ActiveAssignmentRef, Bed, BedAssignment, BedSummary, Floor, FloorLayout, Room, RoomStatus,
+};
 
 pub struct NewFloor<'a> {
     pub name: &'a str,
@@ -26,9 +28,17 @@ pub struct NewBed<'a> {
     pub label: &'a str,
 }
 
+pub struct NewAssignment {
+    pub bed_id: i64,
+    pub patient_id: i64,
+    pub encounter_id: i64,
+    pub assigned_by_user_id: i64,
+}
+
 const FLOOR_COLUMNS: &str = "id, name, level_order, created_at";
 const ROOM_COLUMNS: &str = "id, floor_id, name, room_type, map_x, map_y, created_at";
 const BED_COLUMNS: &str = "id, room_id, label, status, created_at, updated_at";
+const ASSIGNMENT_COLUMNS: &str = "id, bed_id, patient_id, encounter_id, assigned_at, released_at";
 
 pub fn insert_floor(conn: &Connection, new_floor: &NewFloor) -> Result<i64, DbError> {
     conn.execute(
@@ -98,6 +108,58 @@ pub fn find_bed_by_id(conn: &Connection, id: i64) -> Result<Option<Bed>, DbError
     .map_err(DbError::from)
 }
 
+pub fn insert_assignment(
+    conn: &Connection,
+    new_assignment: &NewAssignment,
+) -> Result<i64, DbError> {
+    conn.execute(
+        "INSERT INTO bed_assignments (bed_id, patient_id, encounter_id, assigned_by_user_id) \
+         VALUES (?1, ?2, ?3, ?4)",
+        params![
+            new_assignment.bed_id,
+            new_assignment.patient_id,
+            new_assignment.encounter_id,
+            new_assignment.assigned_by_user_id,
+        ],
+    )?;
+    Ok(conn.last_insert_rowid())
+}
+
+pub fn find_assignment_by_id(conn: &Connection, id: i64) -> Result<Option<BedAssignment>, DbError> {
+    conn.query_row(
+        &format!("SELECT {ASSIGNMENT_COLUMNS} FROM bed_assignments WHERE id = ?1"),
+        params![id],
+        map_row_to_assignment,
+    )
+    .optional()
+    .map_err(DbError::from)
+}
+
+pub fn find_active_assignment_by_bed_id(
+    conn: &Connection,
+    bed_id: i64,
+) -> Result<Option<BedAssignment>, DbError> {
+    conn.query_row(
+        &format!(
+            "SELECT {ASSIGNMENT_COLUMNS} FROM bed_assignments \
+             WHERE bed_id = ?1 AND released_at IS NULL"
+        ),
+        params![bed_id],
+        map_row_to_assignment,
+    )
+    .optional()
+    .map_err(DbError::from)
+}
+
+pub fn release_assignment(conn: &Connection, id: i64) -> Result<Option<BedAssignment>, DbError> {
+    conn.execute(
+        "UPDATE bed_assignments SET released_at = datetime('now') \
+         WHERE id = ?1 AND released_at IS NULL",
+        params![id],
+    )?;
+    find_assignment_by_id(conn, id)
+}
+
 fn list_rooms_by_floor(conn: &Connection, floor_id: i64) -> Result<Vec<Room>, DbError> {
     let mut stmt = conn.prepare(&format!(
         "SELECT {ROOM_COLUMNS} FROM rooms WHERE floor_id = ?1 ORDER BY name"
@@ -158,6 +220,68 @@ pub fn get_room_status(conn: &Connection, room_id: i64) -> Result<Option<RoomSta
         occupied_count,
         maintenance_count,
     }))
+}
+
+/// Backs `beds_list` (IPC.md Section 2.1) — every bed (optionally scoped to one room) with its
+/// active assignment linkage, via a `LEFT JOIN` on the partial-unique-index-backed active row.
+pub fn list_beds_with_active_assignment(
+    conn: &Connection,
+    room_id: Option<i64>,
+) -> Result<Vec<BedSummary>, DbError> {
+    let sql = format!(
+        "SELECT b.id, b.room_id, b.label, b.status, b.created_at, b.updated_at, \
+                a.id, a.patient_id, a.encounter_id \
+         FROM beds b \
+         LEFT JOIN bed_assignments a ON a.bed_id = b.id AND a.released_at IS NULL \
+         {} \
+         ORDER BY b.label",
+        if room_id.is_some() {
+            "WHERE b.room_id = ?1"
+        } else {
+            ""
+        }
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = match room_id {
+        Some(id) => stmt.query_map(params![id], map_row_to_bed_summary)?,
+        None => stmt.query_map([], map_row_to_bed_summary)?,
+    };
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
+}
+
+fn map_row_to_bed_summary(row: &Row) -> rusqlite::Result<BedSummary> {
+    let assignment_id: Option<i64> = row.get(6)?;
+    let active_assignment = assignment_id.map(|id| -> rusqlite::Result<ActiveAssignmentRef> {
+        Ok(ActiveAssignmentRef {
+            id,
+            patient_id: row.get(7)?,
+            encounter_id: row.get(8)?,
+        })
+    });
+    let active_assignment = active_assignment.transpose()?;
+
+    Ok(BedSummary {
+        bed: Bed {
+            id: row.get(0)?,
+            room_id: row.get(1)?,
+            label: row.get(2)?,
+            status: row.get(3)?,
+            created_at: row.get(4)?,
+            updated_at: row.get(5)?,
+        },
+        active_assignment,
+    })
+}
+
+fn map_row_to_assignment(row: &Row) -> rusqlite::Result<BedAssignment> {
+    Ok(BedAssignment {
+        id: row.get(0)?,
+        bed_id: row.get(1)?,
+        patient_id: row.get(2)?,
+        encounter_id: row.get(3)?,
+        assigned_at: row.get(4)?,
+        released_at: row.get(5)?,
+    })
 }
 
 fn map_row_to_floor(row: &Row) -> rusqlite::Result<Floor> {
@@ -393,5 +517,157 @@ mod tests {
         assert_eq!(status.available_count, 1);
         assert_eq!(status.maintenance_count, 1);
         assert_eq!(status.occupied_count, 0);
+    }
+
+    fn seed_user(conn: &Connection) -> i64 {
+        conn.execute(
+            "INSERT INTO users (full_name, username, password_hash, role) \
+             VALUES ('Test Admin', 'test-admin', 'argon2id$dummy', 'admin')",
+            [],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    fn seed_patient(conn: &Connection) -> i64 {
+        conn.execute(
+            "INSERT INTO patients (medical_record_number, full_name, date_of_birth, sex) \
+             VALUES ('MRN-1', 'Jane Doe', '1990-01-01', 'female')",
+            [],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    fn seed_encounter(conn: &Connection, patient_id: i64, created_by_user_id: i64) -> i64 {
+        conn.execute(
+            "INSERT INTO encounters (patient_id, created_by_user_id) VALUES (?1, ?2)",
+            params![patient_id, created_by_user_id],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    #[test]
+    fn insert_then_find_active_assignment_round_trips() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let user_id = seed_user(&conn);
+        let patient_id = seed_patient(&conn);
+        let encounter_id = seed_encounter(&conn, patient_id, user_id);
+        let floor_id = insert_floor(&conn, &sample_new_floor()).unwrap();
+        let room_id = insert_room(&conn, &sample_new_room(floor_id)).unwrap();
+        let bed_id = insert_bed(
+            &conn,
+            &NewBed {
+                room_id,
+                label: "Bed 1",
+            },
+        )
+        .unwrap();
+
+        let assignment_id = insert_assignment(
+            &conn,
+            &NewAssignment {
+                bed_id,
+                patient_id,
+                encounter_id,
+                assigned_by_user_id: user_id,
+            },
+        )
+        .unwrap();
+
+        let active = find_active_assignment_by_bed_id(&conn, bed_id)
+            .unwrap()
+            .unwrap();
+        assert_eq!(active.id, assignment_id);
+        assert!(active.released_at.is_none());
+    }
+
+    #[test]
+    fn release_assignment_sets_released_at() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let user_id = seed_user(&conn);
+        let patient_id = seed_patient(&conn);
+        let encounter_id = seed_encounter(&conn, patient_id, user_id);
+        let floor_id = insert_floor(&conn, &sample_new_floor()).unwrap();
+        let room_id = insert_room(&conn, &sample_new_room(floor_id)).unwrap();
+        let bed_id = insert_bed(
+            &conn,
+            &NewBed {
+                room_id,
+                label: "Bed 1",
+            },
+        )
+        .unwrap();
+        let assignment_id = insert_assignment(
+            &conn,
+            &NewAssignment {
+                bed_id,
+                patient_id,
+                encounter_id,
+                assigned_by_user_id: user_id,
+            },
+        )
+        .unwrap();
+
+        let released = release_assignment(&conn, assignment_id).unwrap().unwrap();
+
+        assert!(released.released_at.is_some());
+        assert!(find_active_assignment_by_bed_id(&conn, bed_id)
+            .unwrap()
+            .is_none());
+    }
+
+    #[test]
+    fn list_beds_with_active_assignment_reflects_the_active_row_only() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let user_id = seed_user(&conn);
+        let patient_id = seed_patient(&conn);
+        let encounter_id = seed_encounter(&conn, patient_id, user_id);
+        let floor_id = insert_floor(&conn, &sample_new_floor()).unwrap();
+        let room_id = insert_room(&conn, &sample_new_room(floor_id)).unwrap();
+        let occupied_bed_id = insert_bed(
+            &conn,
+            &NewBed {
+                room_id,
+                label: "Bed 1",
+            },
+        )
+        .unwrap();
+        insert_bed(
+            &conn,
+            &NewBed {
+                room_id,
+                label: "Bed 2",
+            },
+        )
+        .unwrap();
+        insert_assignment(
+            &conn,
+            &NewAssignment {
+                bed_id: occupied_bed_id,
+                patient_id,
+                encounter_id,
+                assigned_by_user_id: user_id,
+            },
+        )
+        .unwrap();
+
+        let summaries = list_beds_with_active_assignment(&conn, Some(room_id)).unwrap();
+
+        assert_eq!(summaries.len(), 2);
+        let occupied = summaries
+            .iter()
+            .find(|summary| summary.bed.id == occupied_bed_id)
+            .unwrap();
+        assert!(occupied.active_assignment.is_some());
+        let free = summaries
+            .iter()
+            .find(|summary| summary.bed.id != occupied_bed_id)
+            .unwrap();
+        assert!(free.active_assignment.is_none());
     }
 }
