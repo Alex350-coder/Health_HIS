@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-beds-list"
+description = "Enables the beds_list command without any pre-configured scope."
+commands.allow = ["beds_list"]
+
+[[permission]]
+identifier = "deny-beds-list"
+description = "Denies the beds_list command without any pre-configured scope."
+commands.deny = ["beds_list"]

@@ -30,6 +30,9 @@
     "allow-beds-create-floor",
     "allow-beds-create-room",
     "allow-beds-create",
-    "allow-beds-set-status"
+    "allow-beds-set-status",
+    "allow-beds-list",
+    "allow-beds-assign",
+    "allow-beds-release"
   ]
 }

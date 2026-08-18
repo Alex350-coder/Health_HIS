@@ -9,10 +9,11 @@ use rusqlite::Connection;
 
 use crate::commands::{lock_connection, require_active_session};
 use crate::events::emitter;
-use crate::models::{Bed, Floor, Room};
+use crate::models::{Bed, BedAssignment, BedSummary, Floor, Room};
 use crate::services::bed_service;
 use crate::validation::bed_validation::{
-    CreateBedInput, CreateFloorInput, CreateRoomInput, SetBedStatusInput,
+    AssignBedInput, CreateBedInput, CreateFloorInput, CreateRoomInput, ReleaseBedInput,
+    SetBedStatusInput,
 };
 use crate::ActiveSession;
 
@@ -70,4 +71,43 @@ pub fn beds_set_status(
     let bed = bed_service::set_status(&mut conn, authenticated.user_id, &input)?;
     emitter::emit(&app, "beds:facility:changed", &bed)?;
     Ok(bed)
+}
+
+#[tauri::command]
+pub fn beds_list(
+    state: tauri::State<'_, Mutex<Connection>>,
+    active_session: tauri::State<'_, ActiveSession>,
+    room_id: Option<i64>,
+) -> Result<Vec<BedSummary>, crate::errors::AppError> {
+    let conn = lock_connection(&state)?;
+    require_active_session(&conn, &active_session)?;
+    bed_service::list(&conn, room_id)
+}
+
+#[tauri::command]
+pub fn beds_assign(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, Mutex<Connection>>,
+    active_session: tauri::State<'_, ActiveSession>,
+    input: AssignBedInput,
+) -> Result<BedAssignment, crate::errors::AppError> {
+    let mut conn = lock_connection(&state)?;
+    let authenticated = require_active_session(&conn, &active_session)?;
+    let assignment = bed_service::assign(&mut conn, authenticated.user_id, &input)?;
+    emitter::emit(&app, "beds:assignment:created", &assignment)?;
+    Ok(assignment)
+}
+
+#[tauri::command]
+pub fn beds_release(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, Mutex<Connection>>,
+    active_session: tauri::State<'_, ActiveSession>,
+    input: ReleaseBedInput,
+) -> Result<BedAssignment, crate::errors::AppError> {
+    let mut conn = lock_connection(&state)?;
+    let authenticated = require_active_session(&conn, &active_session)?;
+    let assignment = bed_service::release(&mut conn, authenticated.user_id, &input)?;
+    emitter::emit(&app, "beds:assignment:released", &assignment)?;
+    Ok(assignment)
 }

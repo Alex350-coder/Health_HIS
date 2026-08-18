@@ -25,6 +25,9 @@ const COMMANDS: &[&str] = &[
     "beds_create_room",
     "beds_create",
     "beds_set_status",
+    "beds_list",
+    "beds_assign",
+    "beds_release",
 ];
 
 fn main() {
