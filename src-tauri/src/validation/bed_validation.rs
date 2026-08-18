@@ -60,6 +60,27 @@ pub struct SetBedStatusInput {
     pub status: String,
 }
 
+/// Backs `beds_assign` (IPC.md Section 2.1). Availability is a business rule enforced in
+/// `bed_service::assign`, not here — validation only checks the input's own shape.
+#[derive(Debug, Deserialize, Validate)]
+#[serde(rename_all = "camelCase")]
+pub struct AssignBedInput {
+    #[validate(range(min = 1))]
+    pub bed_id: i64,
+    #[validate(range(min = 1))]
+    pub patient_id: i64,
+    #[validate(range(min = 1))]
+    pub encounter_id: i64,
+}
+
+/// Backs `beds_release` (IPC.md Section 2.1).
+#[derive(Debug, Deserialize, Validate)]
+#[serde(rename_all = "camelCase")]
+pub struct ReleaseBedInput {
+    #[validate(range(min = 1))]
+    pub bed_assignment_id: i64,
+}
+
 pub fn validate_create_floor(input: &CreateFloorInput) -> Result<(), AppError> {
     input.validate().map_err(map_validation_errors)
 }
@@ -73,6 +94,14 @@ pub fn validate_create_bed(input: &CreateBedInput) -> Result<(), AppError> {
 }
 
 pub fn validate_set_bed_status(input: &SetBedStatusInput) -> Result<(), AppError> {
+    input.validate().map_err(map_validation_errors)
+}
+
+pub fn validate_assign_bed(input: &AssignBedInput) -> Result<(), AppError> {
+    input.validate().map_err(map_validation_errors)
+}
+
+pub fn validate_release_bed(input: &ReleaseBedInput) -> Result<(), AppError> {
     input.validate().map_err(map_validation_errors)
 }
 
@@ -211,5 +240,61 @@ mod tests {
             ..valid_set_bed_status()
         };
         assert!(validate_set_bed_status(&input).is_err());
+    }
+
+    fn valid_assign_bed() -> AssignBedInput {
+        AssignBedInput {
+            bed_id: 1,
+            patient_id: 1,
+            encounter_id: 1,
+        }
+    }
+
+    #[test]
+    fn accepts_a_fully_valid_assign_bed_input() {
+        assert!(validate_assign_bed(&valid_assign_bed()).is_ok());
+    }
+
+    #[test]
+    fn rejects_a_non_positive_bed_id() {
+        let input = AssignBedInput {
+            bed_id: 0,
+            ..valid_assign_bed()
+        };
+        assert!(validate_assign_bed(&input).is_err());
+    }
+
+    #[test]
+    fn rejects_a_non_positive_patient_id() {
+        let input = AssignBedInput {
+            patient_id: -1,
+            ..valid_assign_bed()
+        };
+        assert!(validate_assign_bed(&input).is_err());
+    }
+
+    #[test]
+    fn rejects_a_non_positive_encounter_id() {
+        let input = AssignBedInput {
+            encounter_id: 0,
+            ..valid_assign_bed()
+        };
+        assert!(validate_assign_bed(&input).is_err());
+    }
+
+    #[test]
+    fn accepts_a_valid_release_bed_input() {
+        assert!(validate_release_bed(&ReleaseBedInput {
+            bed_assignment_id: 1
+        })
+        .is_ok());
+    }
+
+    #[test]
+    fn rejects_a_non_positive_bed_assignment_id() {
+        assert!(validate_release_bed(&ReleaseBedInput {
+            bed_assignment_id: 0
+        })
+        .is_err());
     }
 }
