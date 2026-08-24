@@ -11,12 +11,14 @@ export const EVENT_QUERY_MAP: Record<string, QueryKey[]> = {
     ['patients', 'list'],
     ['patients', 'detail'],
   ],
-  'medical-history:encounter:created': [['medical-history']],
-  'medical-history:encounter:discharged': [['medical-history']],
+  'medical-history:encounter:created': [['medical-history'], ['patients', 'detail']],
+  'medical-history:encounter:discharged': [['medical-history'], ['patients', 'detail']],
   'medical-history:diagnosis:created': [['medical-history']],
   'medical-history:treatment:created': [['medical-history']],
   'medical-history:evolution:created': [['medical-history']],
-  'beds:facility:changed': [['beds'], ['hospital-map', 'layout']],
-  'beds:assignment:created': [['beds'], ['hospital-map', 'layout'], ['medical-history']],
-  'beds:assignment:released': [['beds'], ['hospital-map', 'layout'], ['medical-history']],
+  // ['hospital-map'] (not ['hospital-map', 'layout']) so an open room-detail panel
+  // (['hospital-map', 'room-status', roomId]) also refreshes on bed changes.
+  'beds:facility:changed': [['beds'], ['hospital-map']],
+  'beds:assignment:created': [['beds'], ['hospital-map'], ['medical-history']],
+  'beds:assignment:released': [['beds'], ['hospital-map'], ['medical-history']],
 };

@@ -83,7 +83,7 @@ export default defineFlatConfig(
 
   {
     // Rules.md 7.4 / 15.x — tests may assert non-null and exceed the function-length limit.
-    files: ['**/*.test.{ts,tsx}', 'vitest.setup.ts'],
+    files: ['**/*.test.{ts,tsx}', 'vitest.setup.ts', 'tests/e2e/**/*.spec.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       'max-lines-per-function': 'off',
