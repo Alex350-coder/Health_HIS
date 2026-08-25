@@ -5,7 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithQueryClient } from '@shared/test/render-with-query-client';
 
-import { CreateBedForm, CreateFloorForm, CreateRoomForm } from './FacilityConfigForms';
+import {
+  CreateBedForm,
+  CreateFloorForm,
+  CreateRoomForm,
+  PromoteRoomToOperatingRoomForm,
+} from './FacilityConfigForms';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 
@@ -106,6 +111,32 @@ describe('CreateBedForm', () => {
     await waitFor(() => {
       expect(mockedInvoke).toHaveBeenCalledWith('beds_create', {
         input: { roomId: 1, label: 'Bed 1A' },
+      });
+    });
+  });
+});
+
+describe('PromoteRoomToOperatingRoomForm', () => {
+  beforeEach(() => {
+    mockedInvoke.mockReset();
+  });
+
+  it('submits a valid room ID', async () => {
+    const user = userEvent.setup();
+    mockedInvoke.mockResolvedValueOnce({
+      id: 1,
+      roomId: 1,
+      name: 'OR Suite',
+      createdAt: '2026-01-01T00:00:00Z',
+    });
+    renderWithQueryClient(<PromoteRoomToOperatingRoomForm />);
+
+    await user.type(screen.getByLabelText('Room ID'), '1');
+    await user.click(screen.getByRole('button', { name: 'Promote to OR' }));
+
+    await waitFor(() => {
+      expect(mockedInvoke).toHaveBeenCalledWith('operating_rooms_create', {
+        input: { roomId: 1 },
       });
     });
   });

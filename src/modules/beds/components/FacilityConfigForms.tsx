@@ -5,6 +5,13 @@ import { formErrorMessage } from '@shared/errors/error-messages';
 import { Button } from '@shared/ui/Button';
 import { FormField } from '@shared/ui/FormField';
 
+import { useCreateOperatingRoom } from '@modules/operating-rooms/api/or-mutations';
+import {
+  createOperatingRoomSchema,
+  type CreateOperatingRoomFormValues,
+  type CreateOperatingRoomInput,
+} from '@modules/operating-rooms/types/or-schemas';
+
 import { useCreateBed, useCreateFloor, useCreateRoom } from '../api/bed-mutations';
 import {
   createBedSchema,
@@ -112,6 +119,40 @@ export function CreateRoomForm(): JSX.Element {
       {errorMessage ? <p role="alert">{errorMessage}</p> : null}
       <Button type="submit" disabled={createRoom.isPending}>
         {createRoom.isPending ? 'Adding…' : 'Add room'}
+      </Button>
+    </form>
+  );
+}
+
+export function PromoteRoomToOperatingRoomForm(): JSX.Element {
+  const createOperatingRoom = useCreateOperatingRoom();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<CreateOperatingRoomFormValues, unknown, CreateOperatingRoomInput>({
+    resolver: zodResolver(createOperatingRoomSchema),
+  });
+
+  const onSubmit = handleSubmit((input) => {
+    createOperatingRoom.mutate(input, { onSuccess: () => reset() });
+  });
+
+  const errorMessage = formErrorMessage(createOperatingRoom.error);
+
+  return (
+    <form
+      onSubmit={(event) => void onSubmit(event)}
+      noValidate
+      aria-label="Promote to operating room"
+    >
+      <FormField id="operating-room-room-id" label="Room ID" error={errors.roomId?.message}>
+        <input id="operating-room-room-id" type="number" {...register('roomId')} />
+      </FormField>
+      {errorMessage ? <p role="alert">{errorMessage}</p> : null}
+      <Button type="submit" disabled={createOperatingRoom.isPending}>
+        {createOperatingRoom.isPending ? 'Promoting…' : 'Promote to OR'}
       </Button>
     </form>
   );
