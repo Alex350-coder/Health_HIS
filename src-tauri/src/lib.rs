@@ -58,6 +58,12 @@ pub fn run() {
             commands::bed_commands::beds_list,
             commands::bed_commands::beds_assign,
             commands::bed_commands::beds_release,
+            commands::operating_room_commands::operating_rooms_create,
+            commands::operating_room_commands::operating_rooms_list,
+            commands::operating_room_commands::operating_rooms_list_reservations,
+            commands::operating_room_commands::operating_rooms_reserve,
+            commands::operating_room_commands::operating_rooms_update_reservation,
+            commands::operating_room_commands::operating_rooms_cancel_reservation,
         ])
         .setup(|app| {
             let data_dir = app

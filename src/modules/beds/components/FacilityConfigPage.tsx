@@ -1,6 +1,11 @@
 import { ErrorBoundary } from '@shared/components/ErrorBoundary';
 
-import { CreateBedForm, CreateFloorForm, CreateRoomForm } from './FacilityConfigForms';
+import {
+  CreateBedForm,
+  CreateFloorForm,
+  CreateRoomForm,
+  PromoteRoomToOperatingRoomForm,
+} from './FacilityConfigForms';
 import { FacilityStructureView } from './FacilityStructureView';
 
 /** The only write path for structural facility data — floors, rooms, beds (IPC.md Section 2.1). */
@@ -21,6 +26,10 @@ export default function FacilityConfigPage(): JSX.Element {
           <div>
             <h2 className="text-base font-semibold text-text-primary">Add bed</h2>
             <CreateBedForm />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-text-primary">Promote room to OR</h2>
+            <PromoteRoomToOperatingRoomForm />
           </div>
         </section>
         <section>

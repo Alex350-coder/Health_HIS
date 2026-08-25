@@ -21,6 +21,10 @@ describe('EVENT_QUERY_MAP — IPC.md event catalog correspondence', () => {
     'beds:facility:changed',
     'beds:assignment:created',
     'beds:assignment:released',
+    'operating-rooms:room:created',
+    'operating-rooms:reservation:created',
+    'operating-rooms:reservation:updated',
+    'operating-rooms:reservation:cancelled',
   ])('has an entry for %s', (eventName) => {
     expect(EVENT_QUERY_MAP[eventName]).toBeDefined();
     expect(EVENT_QUERY_MAP[eventName]?.length).toBeGreaterThan(0);
@@ -33,6 +37,10 @@ describe('EVENT_QUERY_MAP — IPC.md event catalog correspondence', () => {
       'beds:facility:changed',
       'beds:assignment:created',
       'beds:assignment:released',
+      'operating-rooms:room:created',
+      'operating-rooms:reservation:created',
+      'operating-rooms:reservation:updated',
+      'operating-rooms:reservation:cancelled',
     ]) {
       const keys = EVENT_QUERY_MAP[eventName] ?? [];
       const coversHospitalMap = keys.some((key) => key.length <= 1 && key[0] === 'hospital-map');

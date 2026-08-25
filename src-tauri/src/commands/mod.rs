@@ -14,6 +14,7 @@ pub mod auth_commands;
 pub mod bed_commands;
 pub mod hospital_map_commands;
 pub mod medical_history_commands;
+pub mod operating_room_commands;
 pub mod patient_commands;
 
 use std::sync::{Mutex, MutexGuard};
