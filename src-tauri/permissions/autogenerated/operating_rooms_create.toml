@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-operating-rooms-create"
+description = "Enables the operating_rooms_create command without any pre-configured scope."
+commands.allow = ["operating_rooms_create"]
+
+[[permission]]
+identifier = "deny-operating-rooms-create"
+description = "Denies the operating_rooms_create command without any pre-configured scope."
+commands.deny = ["operating_rooms_create"]
