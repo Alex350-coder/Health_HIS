@@ -64,6 +64,12 @@ pub fn run() {
             commands::operating_room_commands::operating_rooms_reserve,
             commands::operating_room_commands::operating_rooms_update_reservation,
             commands::operating_room_commands::operating_rooms_cancel_reservation,
+            commands::inventory_commands::inventory_list_categories,
+            commands::inventory_commands::inventory_create_category,
+            commands::inventory_commands::inventory_list_items,
+            commands::inventory_commands::inventory_create_item,
+            commands::inventory_commands::inventory_record_transaction,
+            commands::inventory_commands::inventory_schedule_maintenance,
         ])
         .setup(|app| {
             let data_dir = app

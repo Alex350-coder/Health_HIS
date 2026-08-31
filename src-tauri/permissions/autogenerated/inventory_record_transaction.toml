@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-inventory-record-transaction"
+description = "Enables the inventory_record_transaction command without any pre-configured scope."
+commands.allow = ["inventory_record_transaction"]
+
+[[permission]]
+identifier = "deny-inventory-record-transaction"
+description = "Denies the inventory_record_transaction command without any pre-configured scope."
+commands.deny = ["inventory_record_transaction"]

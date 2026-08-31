@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-inventory-create-item"
+description = "Enables the inventory_create_item command without any pre-configured scope."
+commands.allow = ["inventory_create_item"]
+
+[[permission]]
+identifier = "deny-inventory-create-item"
+description = "Denies the inventory_create_item command without any pre-configured scope."
+commands.deny = ["inventory_create_item"]

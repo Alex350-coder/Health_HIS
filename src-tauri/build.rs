@@ -34,6 +34,12 @@ const COMMANDS: &[&str] = &[
     "operating_rooms_reserve",
     "operating_rooms_update_reservation",
     "operating_rooms_cancel_reservation",
+    "inventory_list_categories",
+    "inventory_create_category",
+    "inventory_list_items",
+    "inventory_create_item",
+    "inventory_record_transaction",
+    "inventory_schedule_maintenance",
 ];
 
 fn main() {

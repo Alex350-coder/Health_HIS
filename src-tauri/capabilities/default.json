@@ -39,6 +39,12 @@
     "allow-operating-rooms-list-reservations",
     "allow-operating-rooms-reserve",
     "allow-operating-rooms-update-reservation",
-    "allow-operating-rooms-cancel-reservation"
+    "allow-operating-rooms-cancel-reservation",
+    "allow-inventory-list-categories",
+    "allow-inventory-create-category",
+    "allow-inventory-list-items",
+    "allow-inventory-create-item",
+    "allow-inventory-record-transaction",
+    "allow-inventory-schedule-maintenance"
   ]
 }

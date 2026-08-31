@@ -13,6 +13,7 @@ pub mod audit_commands;
 pub mod auth_commands;
 pub mod bed_commands;
 pub mod hospital_map_commands;
+pub mod inventory_commands;
 pub mod medical_history_commands;
 pub mod operating_room_commands;
 pub mod patient_commands;
