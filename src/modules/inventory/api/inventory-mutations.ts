@@ -54,6 +54,7 @@ export function useRecordInventoryTransaction(): UseMutationResult<
       callCommand<InventoryTransaction>('inventory_record_transaction', { input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['inventory', 'items'] });
+      void queryClient.invalidateQueries({ queryKey: ['inventory', 'transactions'] });
     },
   });
 }

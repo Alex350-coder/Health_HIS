@@ -29,6 +29,9 @@ export const EVENT_QUERY_MAP: Record<string, QueryKey[]> = {
   'operating-rooms:reservation:cancelled': [['operating-rooms'], ['hospital-map']],
   'inventory:category:created': [['inventory', 'categories']],
   'inventory:item:created': [['inventory', 'items']],
-  'inventory:transaction:created': [['inventory', 'items']],
+  'inventory:transaction:created': [
+    ['inventory', 'items'],
+    ['inventory', 'transactions'],
+  ],
   'inventory:maintenance:created': [['inventory', 'maintenance']],
 };

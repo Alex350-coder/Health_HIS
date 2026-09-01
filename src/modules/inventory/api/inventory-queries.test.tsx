@@ -3,9 +3,19 @@ import { invoke } from '@tauri-apps/api/core';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useInventoryCategoriesList, useInventoryItemsList } from './inventory-queries';
+import {
+  useInventoryCategoriesList,
+  useInventoryItemsList,
+  useInventoryMaintenanceSchedulesList,
+  useInventoryTransactionsList,
+} from './inventory-queries';
 
-import type { InventoryCategory, InventoryItem } from '../types/inventory-schemas';
+import type {
+  InventoryCategory,
+  InventoryItem,
+  InventoryTransaction,
+  MaintenanceSchedule,
+} from '../types/inventory-schemas';
 import type { ReactNode } from 'react';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
@@ -83,6 +93,58 @@ describe('useInventoryItemsList', () => {
     expect(mockedInvoke).toHaveBeenCalledWith('inventory_list_items', {
       categoryId: 1,
       lowStockOnly: true,
+    });
+  });
+});
+
+describe('useInventoryTransactionsList', () => {
+  beforeEach(() => {
+    mockedInvoke.mockReset();
+  });
+
+  it('calls inventory_list_transactions with the item id', async () => {
+    const transaction: InventoryTransaction = {
+      id: 1,
+      itemId: 1,
+      quantityDelta: 50,
+      reason: 'restock',
+      encounterId: null,
+      treatmentId: null,
+      performedByUserId: 1,
+      createdAt: '2026-01-01T00:00:00Z',
+    };
+    mockedInvoke.mockResolvedValueOnce([transaction]);
+    const { result } = renderHook(() => useInventoryTransactionsList(1), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([transaction]);
+    });
+    expect(mockedInvoke).toHaveBeenCalledWith('inventory_list_transactions', { itemId: 1 });
+  });
+});
+
+describe('useInventoryMaintenanceSchedulesList', () => {
+  beforeEach(() => {
+    mockedInvoke.mockReset();
+  });
+
+  it('calls inventory_list_maintenance_schedules with the item id', async () => {
+    const schedule: MaintenanceSchedule = {
+      id: 1,
+      inventoryItemId: 1,
+      scheduledDate: '2026-03-01',
+      completedDate: null,
+      notes: null,
+      createdAt: '2026-01-01T00:00:00Z',
+    };
+    mockedInvoke.mockResolvedValueOnce([schedule]);
+    const { result } = renderHook(() => useInventoryMaintenanceSchedulesList(1), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([schedule]);
+    });
+    expect(mockedInvoke).toHaveBeenCalledWith('inventory_list_maintenance_schedules', {
+      itemId: 1,
     });
   });
 });

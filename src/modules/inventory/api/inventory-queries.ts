@@ -2,7 +2,12 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { callCommand } from '@shared/lib/api-client';
 
-import type { InventoryCategory, InventoryItem } from '../types/inventory-schemas';
+import type {
+  InventoryCategory,
+  InventoryItem,
+  InventoryTransaction,
+  MaintenanceSchedule,
+} from '../types/inventory-schemas';
 
 export function useInventoryCategoriesList(): UseQueryResult<InventoryCategory[]> {
   return useQuery({
@@ -28,5 +33,24 @@ export function useInventoryItemsList(
         categoryId,
         lowStockOnly,
       }),
+  });
+}
+
+export function useInventoryTransactionsList(
+  itemId: number,
+): UseQueryResult<InventoryTransaction[]> {
+  return useQuery({
+    queryKey: ['inventory', 'transactions', itemId],
+    queryFn: () => callCommand<InventoryTransaction[]>('inventory_list_transactions', { itemId }),
+  });
+}
+
+export function useInventoryMaintenanceSchedulesList(
+  itemId: number,
+): UseQueryResult<MaintenanceSchedule[]> {
+  return useQuery({
+    queryKey: ['inventory', 'maintenance', itemId],
+    queryFn: () =>
+      callCommand<MaintenanceSchedule[]>('inventory_list_maintenance_schedules', { itemId }),
   });
 }
