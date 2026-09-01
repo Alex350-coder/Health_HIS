@@ -72,6 +72,8 @@ pub fn run() {
             commands::inventory_commands::inventory_schedule_maintenance,
             commands::inventory_commands::inventory_list_transactions,
             commands::inventory_commands::inventory_list_maintenance_schedules,
+            commands::notification_commands::notifications_list,
+            commands::notification_commands::notifications_mark_read,
         ])
         .setup(|app| {
             let data_dir = app

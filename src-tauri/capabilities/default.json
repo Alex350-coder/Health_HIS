@@ -47,6 +47,8 @@
     "allow-inventory-record-transaction",
     "allow-inventory-schedule-maintenance",
     "allow-inventory-list-transactions",
-    "allow-inventory-list-maintenance-schedules"
+    "allow-inventory-list-maintenance-schedules",
+    "allow-notifications-list",
+    "allow-notifications-mark-read"
   ]
 }

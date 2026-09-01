@@ -42,6 +42,8 @@ const COMMANDS: &[&str] = &[
     "inventory_schedule_maintenance",
     "inventory_list_transactions",
     "inventory_list_maintenance_schedules",
+    "notifications_list",
+    "notifications_mark_read",
 ];
 
 fn main() {
