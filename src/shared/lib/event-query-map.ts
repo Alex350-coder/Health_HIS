@@ -34,4 +34,5 @@ export const EVENT_QUERY_MAP: Record<string, QueryKey[]> = {
     ['inventory', 'transactions'],
   ],
   'inventory:maintenance:created': [['inventory', 'maintenance']],
+  'notifications:notification:created': [['notifications', 'list']],
 };
