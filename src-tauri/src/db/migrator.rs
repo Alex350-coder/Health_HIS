@@ -41,6 +41,10 @@ pub fn embedded_migrations() -> &'static [(&'static str, &'static str)] {
             "0007_inventory.sql",
             include_str!("../../migrations/0007_inventory.sql"),
         ),
+        (
+            "0008_notifications.sql",
+            include_str!("../../migrations/0008_notifications.sql"),
+        ),
     ]
 }
 
@@ -119,7 +123,7 @@ mod tests {
 
         run_migrations(&conn, embedded_migrations()).unwrap();
 
-        assert_eq!(migration_count(&conn), 8);
+        assert_eq!(migration_count(&conn), 9);
         let version: String = conn
             .query_row(
                 "SELECT version FROM schema_migrations ORDER BY version LIMIT 1",
@@ -138,7 +142,7 @@ mod tests {
         run_migrations(&conn, embedded_migrations()).unwrap();
         run_migrations(&conn, embedded_migrations()).unwrap();
 
-        assert_eq!(migration_count(&conn), 8);
+        assert_eq!(migration_count(&conn), 9);
     }
 
     /// Rules.md 9.6 — applies every migration to an empty file, then inserts one row into every
@@ -177,6 +181,12 @@ mod tests {
             .query_row("SELECT count(*) FROM audit_log", [], |row| row.get(0))
             .unwrap();
         assert_eq!(audit_count, 1);
+
+        conn.execute(
+            "INSERT INTO notifications (type, message) VALUES ('other', 'test notification')",
+            [],
+        )
+        .unwrap();
     }
 
     #[test]
