@@ -239,6 +239,22 @@ pub fn find_maintenance_schedule_by_id(
     .map_err(DbError::from)
 }
 
+/// Every incomplete maintenance schedule due on or before `before_date` (inclusive,
+/// `YYYY-MM-DD`) — the read-only detection Phase 11 (Notifications) calls to decide when to
+/// raise a maintenance-due alert. Mirrors `find_expiring_items`.
+pub fn find_due_maintenance_schedules(
+    conn: &Connection,
+    before_date: &str,
+) -> Result<Vec<MaintenanceSchedule>, DbError> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {MAINTENANCE_COLUMNS} FROM maintenance_schedules \
+         WHERE completed_date IS NULL AND scheduled_date <= ?1 \
+         ORDER BY scheduled_date"
+    ))?;
+    let rows = stmt.query_map(params![before_date], map_row_to_maintenance_schedule)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
+}
+
 pub fn list_maintenance_schedules_for_item(
     conn: &Connection,
     inventory_item_id: i64,
@@ -468,6 +484,52 @@ mod tests {
         assert_eq!(transactions.len(), 1);
         assert_eq!(transactions[0].quantity_delta, 100);
         assert_eq!(transactions[0].reason, "restock");
+    }
+
+    #[test]
+    fn find_due_maintenance_schedules_excludes_completed_and_far_future_schedules() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let category_id = seed_category(&conn);
+        let item_id = seed_item(&conn, category_id);
+
+        let due_id = insert_maintenance_schedule(
+            &conn,
+            &NewMaintenanceSchedule {
+                inventory_item_id: item_id,
+                scheduled_date: "2026-01-05",
+                notes: None,
+            },
+        )
+        .unwrap();
+        insert_maintenance_schedule(
+            &conn,
+            &NewMaintenanceSchedule {
+                inventory_item_id: item_id,
+                scheduled_date: "2099-01-01",
+                notes: None,
+            },
+        )
+        .unwrap();
+        let completed_id = insert_maintenance_schedule(
+            &conn,
+            &NewMaintenanceSchedule {
+                inventory_item_id: item_id,
+                scheduled_date: "2026-01-01",
+                notes: None,
+            },
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE maintenance_schedules SET completed_date = '2026-01-02' WHERE id = ?1",
+            params![completed_id],
+        )
+        .unwrap();
+
+        let due = find_due_maintenance_schedules(&conn, "2026-01-10").unwrap();
+
+        assert_eq!(due.len(), 1);
+        assert_eq!(due[0].id, due_id);
     }
 
     #[test]

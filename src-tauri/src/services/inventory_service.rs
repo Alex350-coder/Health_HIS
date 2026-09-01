@@ -237,6 +237,19 @@ pub fn list_expiring_items(
     )?)
 }
 
+/// Read-only detection query. Phase 11 (Notifications) calls this directly to decide when to
+/// raise a maintenance-due alert — no `Notification` rows are written here. Mirrors
+/// `list_expiring_items`; gap-fix added alongside Phase 11 (Progress.md Deviations).
+pub fn list_due_maintenance_schedules(
+    conn: &Connection,
+    before_date: &str,
+) -> Result<Vec<MaintenanceSchedule>, AppError> {
+    Ok(inventory_repository::find_due_maintenance_schedules(
+        conn,
+        before_date,
+    )?)
+}
+
 /// Powers the item detail page's transaction history table (Routes.md).
 pub fn list_transactions_for_item(
     conn: &Connection,
@@ -505,6 +518,29 @@ mod tests {
         let expiring = list_expiring_items(&conn, "2026-12-31").unwrap();
 
         assert_eq!(expiring.len(), 1);
+    }
+
+    #[test]
+    fn list_due_maintenance_schedules_returns_schedules_on_or_before_the_cutoff() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let category = create_category(&mut conn, ACTOR_USER_ID, &create_category_input()).unwrap();
+        let item = create_item(&mut conn, ACTOR_USER_ID, &create_item_input(category.id)).unwrap();
+        schedule_maintenance(
+            &mut conn,
+            ACTOR_USER_ID,
+            &ScheduleMaintenanceInput {
+                inventory_item_id: item.id,
+                scheduled_date: "2026-02-01".to_string(),
+                notes: None,
+            },
+        )
+        .unwrap();
+
+        let due = list_due_maintenance_schedules(&conn, "2026-12-31").unwrap();
+
+        assert_eq!(due.len(), 1);
+        assert_eq!(due[0].inventory_item_id, item.id);
     }
 
     #[test]
