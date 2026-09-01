@@ -81,6 +81,34 @@ describe('createTreatmentSchema', () => {
       expect(result.data.dosage).toBeUndefined();
     }
   });
+
+  it('accepts a valid inventory item and quantity pair', () => {
+    const result = createTreatmentSchema.safeParse({
+      ...validInput(),
+      inventoryItemId: 1,
+      quantity: 3,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an inventory item id without a quantity', () => {
+    const result = createTreatmentSchema.safeParse({ ...validInput(), inventoryItemId: 1 });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a quantity without an inventory item id', () => {
+    const result = createTreatmentSchema.safeParse({ ...validInput(), quantity: 3 });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a non-positive quantity', () => {
+    const result = createTreatmentSchema.safeParse({
+      ...validInput(),
+      inventoryItemId: 1,
+      quantity: 0,
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('createEvolutionSchema', () => {

@@ -55,7 +55,7 @@ describe('MedicalHistoryTab', () => {
   });
 
   it('shows the open encounter panel when one exists', async () => {
-    mockedInvoke.mockResolvedValueOnce(OPEN_ENCOUNTER_BUNDLE);
+    mockedInvoke.mockResolvedValueOnce(OPEN_ENCOUNTER_BUNDLE).mockResolvedValueOnce([]);
     renderWithQueryClient(<MedicalHistoryTab />);
 
     expect(await screen.findByText(/Open encounter/)).toBeInTheDocument();
