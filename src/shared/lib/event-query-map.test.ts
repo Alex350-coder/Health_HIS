@@ -25,6 +25,10 @@ describe('EVENT_QUERY_MAP — IPC.md event catalog correspondence', () => {
     'operating-rooms:reservation:created',
     'operating-rooms:reservation:updated',
     'operating-rooms:reservation:cancelled',
+    'inventory:category:created',
+    'inventory:item:created',
+    'inventory:transaction:created',
+    'inventory:maintenance:created',
   ])('has an entry for %s', (eventName) => {
     expect(EVENT_QUERY_MAP[eventName]).toBeDefined();
     expect(EVENT_QUERY_MAP[eventName]?.length).toBeGreaterThan(0);
