@@ -270,6 +270,18 @@ pub fn list_maintenance_schedules_for_item(
     )?)
 }
 
+/// Read-only helper for Billing's inventory-charge aggregation (Plan.md Phase 12) — every
+/// transaction tied to one encounter, regardless of `reason`.
+pub fn list_transactions_for_encounter(
+    conn: &Connection,
+    encounter_id: i64,
+) -> Result<Vec<InventoryTransaction>, AppError> {
+    Ok(inventory_repository::list_transactions_by_encounter_id(
+        conn,
+        encounter_id,
+    )?)
+}
+
 fn find_category_or_die(conn: &Connection, id: i64) -> Result<InventoryCategory, AppError> {
     inventory_repository::find_category_by_id(conn, id)?
         .ok_or_else(|| unexpected_vanished("inventory_category", id))

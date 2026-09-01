@@ -210,6 +210,20 @@ pub fn list_transactions_for_item(
     rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
 }
 
+/// Backs Billing's inventory-charge aggregation (Plan.md Phase 12) — every transaction tied to
+/// one encounter, regardless of `reason`; the caller decides which reasons are billable.
+pub fn list_transactions_by_encounter_id(
+    conn: &Connection,
+    encounter_id: i64,
+) -> Result<Vec<InventoryTransaction>, DbError> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {TRANSACTION_COLUMNS} FROM inventory_transactions \
+         WHERE encounter_id = ?1 ORDER BY created_at"
+    ))?;
+    let rows = stmt.query_map(params![encounter_id], map_row_to_transaction)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
+}
+
 pub fn insert_maintenance_schedule(
     conn: &Connection,
     new_schedule: &NewMaintenanceSchedule,
@@ -335,6 +349,25 @@ mod tests {
             "INSERT INTO users (full_name, username, password_hash, role) \
              VALUES ('Test Admin', 'test-admin', 'argon2id$dummy', 'admin')",
             [],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    fn seed_patient(conn: &Connection) -> i64 {
+        conn.execute(
+            "INSERT INTO patients (medical_record_number, full_name, date_of_birth, sex) \
+             VALUES ('MRN-1', 'Jane Doe', '1990-01-01', 'female')",
+            [],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    fn seed_encounter(conn: &Connection, patient_id: i64, created_by_user_id: i64) -> i64 {
+        conn.execute(
+            "INSERT INTO encounters (patient_id, created_by_user_id) VALUES (?1, ?2)",
+            params![patient_id, created_by_user_id],
         )
         .unwrap();
         conn.last_insert_rowid()
@@ -484,6 +517,47 @@ mod tests {
         assert_eq!(transactions.len(), 1);
         assert_eq!(transactions[0].quantity_delta, 100);
         assert_eq!(transactions[0].reason, "restock");
+    }
+
+    #[test]
+    fn list_transactions_by_encounter_id_returns_only_that_encounters_rows() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let category_id = seed_category(&conn);
+        let item_id = seed_item(&conn, category_id);
+        let user_id = seed_user(&conn);
+        let patient_id = seed_patient(&conn);
+        let encounter_id = seed_encounter(&conn, patient_id, user_id);
+
+        insert_transaction(
+            &conn,
+            &NewInventoryTransaction {
+                item_id,
+                quantity_delta: -2,
+                reason: "consumption",
+                encounter_id: Some(encounter_id),
+                treatment_id: None,
+                performed_by_user_id: user_id,
+            },
+        )
+        .unwrap();
+        insert_transaction(
+            &conn,
+            &NewInventoryTransaction {
+                item_id,
+                quantity_delta: 100,
+                reason: "restock",
+                encounter_id: None,
+                treatment_id: None,
+                performed_by_user_id: user_id,
+            },
+        )
+        .unwrap();
+
+        let transactions = list_transactions_by_encounter_id(&conn, encounter_id).unwrap();
+
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(transactions[0].reason, "consumption");
     }
 
     #[test]
