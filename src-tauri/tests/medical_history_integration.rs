@@ -71,6 +71,8 @@ fn a_full_encounter_workflow_persists_every_entity_and_discharges_cleanly() {
             description: "Appendectomy".to_string(),
             dosage: None,
             corrects_treatment_id: None,
+            inventory_item_id: None,
+            quantity: None,
         },
     )
     .unwrap();
@@ -122,6 +124,8 @@ fn a_correction_references_the_original_row_within_the_same_encounter() {
             description: "Amoxicillin 500mg".to_string(),
             dosage: Some("3x/day".to_string()),
             corrects_treatment_id: None,
+            inventory_item_id: None,
+            quantity: None,
         },
     )
     .unwrap();
@@ -135,6 +139,8 @@ fn a_correction_references_the_original_row_within_the_same_encounter() {
             description: "Amoxicillin 875mg".to_string(),
             dosage: Some("2x/day".to_string()),
             corrects_treatment_id: Some(original.id),
+            inventory_item_id: None,
+            quantity: None,
         },
     )
     .unwrap();
@@ -215,6 +221,8 @@ fn the_audit_chain_stays_valid_after_a_full_encounter_lifecycle() {
             description: "Appendectomy".to_string(),
             dosage: None,
             corrects_treatment_id: None,
+            inventory_item_id: None,
+            quantity: None,
         },
     )
     .unwrap();
@@ -227,6 +235,8 @@ fn the_audit_chain_stays_valid_after_a_full_encounter_lifecycle() {
             description: "Appendectomy with drain".to_string(),
             dosage: None,
             corrects_treatment_id: Some(treatment.id),
+            inventory_item_id: None,
+            quantity: None,
         },
     )
     .unwrap();

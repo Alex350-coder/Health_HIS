@@ -28,6 +28,20 @@ const COMMANDS: &[&str] = &[
     "beds_list",
     "beds_assign",
     "beds_release",
+    "operating_rooms_create",
+    "operating_rooms_list",
+    "operating_rooms_list_reservations",
+    "operating_rooms_reserve",
+    "operating_rooms_update_reservation",
+    "operating_rooms_cancel_reservation",
+    "inventory_list_categories",
+    "inventory_create_category",
+    "inventory_list_items",
+    "inventory_create_item",
+    "inventory_record_transaction",
+    "inventory_schedule_maintenance",
+    "inventory_list_transactions",
+    "inventory_list_maintenance_schedules",
 ];
 
 fn main() {

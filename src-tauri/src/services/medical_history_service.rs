@@ -4,6 +4,12 @@
 //! Business rule enforced here (not expressible as a plain SQL constraint): diagnoses,
 //! treatments, and evolutions may only be added to an **open** encounter, and an encounter can
 //! only be discharged once. Both checks happen inside the same transaction as the write.
+//!
+//! `create_treatment` optionally links a treatment to inventory consumption: when
+//! `CreateTreatmentInput.inventory_item_id`/`quantity` are set, it calls
+//! `inventory_service::record_transaction_core` inside its own transaction so the treatment
+//! insert and the inventory consumption commit or roll back together — insufficient stock
+//! (`AppError::Conflict`) rolls back the treatment insert too.
 
 use rusqlite::{Connection, ErrorCode};
 use serde::Serialize;
@@ -16,6 +22,7 @@ use crate::repositories::encounter_repository::{
     self, DischargeEncounter, NewDiagnosis, NewEncounter, NewEvolution, NewTreatment,
 };
 use crate::services::audit_service::{self, RecordInput};
+use crate::services::inventory_service;
 use crate::validation::medical_history_validation::{
     self, CreateDiagnosisInput, CreateEncounterInput, CreateEvolutionInput, CreateTreatmentInput,
     DischargeEncounterInput,
@@ -213,6 +220,17 @@ pub fn create_treatment(
             result: "success",
         },
     )?;
+    if let (Some(item_id), Some(quantity)) = (input.inventory_item_id, input.quantity) {
+        inventory_service::record_transaction_core(
+            &tx,
+            actor_user_id,
+            item_id,
+            -quantity,
+            "consumption",
+            Some(input.encounter_id),
+            Some(treatment_id),
+        )?;
+    }
     tx.commit().map_err(DbError::from)?;
 
     find_treatment_or_die(conn, treatment_id)
@@ -562,6 +580,8 @@ mod tests {
                 description: "Appendectomy".to_string(),
                 dosage: None,
                 corrects_treatment_id: None,
+                inventory_item_id: None,
+                quantity: None,
             },
         )
         .unwrap();
@@ -569,6 +589,106 @@ mod tests {
         assert_eq!(treatment.description, "Appendectomy");
         let rows = audit_repository::list_all_ordered(&conn).unwrap();
         assert!(rows.iter().any(|row| row.action == "treatment.create"));
+    }
+
+    fn seed_inventory_item(conn: &mut Connection) -> i64 {
+        let category = inventory_service::create_category(
+            conn,
+            ACTOR_USER_ID,
+            &crate::validation::inventory_validation::CreateInventoryCategoryInput {
+                name: "Analgesics".to_string(),
+                kind: "medicine".to_string(),
+            },
+        )
+        .unwrap();
+        let item = inventory_service::create_item(
+            conn,
+            ACTOR_USER_ID,
+            &crate::validation::inventory_validation::CreateInventoryItemInput {
+                category_id: category.id,
+                name: "Ibuprofen 400mg".to_string(),
+                unit: "box".to_string(),
+                reorder_threshold: 0,
+                expiration_date: None,
+                location: None,
+            },
+        )
+        .unwrap();
+        item.id
+    }
+
+    #[test]
+    fn create_treatment_with_a_valid_inventory_linkage_consumes_stock() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let item_id = seed_inventory_item(&mut conn);
+        inventory_service::record_transaction(
+            &mut conn,
+            ACTOR_USER_ID,
+            &crate::validation::inventory_validation::CreateInventoryTransactionInput {
+                item_id,
+                quantity_delta: 10,
+                reason: "restock".to_string(),
+                encounter_id: None,
+                treatment_id: None,
+            },
+        )
+        .unwrap();
+        let encounter = create_encounter(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateEncounterInput { patient_id: 1 },
+        )
+        .unwrap();
+
+        create_treatment(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateTreatmentInput {
+                encounter_id: encounter.id,
+                diagnosis_id: None,
+                description: "Appendectomy".to_string(),
+                dosage: None,
+                corrects_treatment_id: None,
+                inventory_item_id: Some(item_id),
+                quantity: Some(3),
+            },
+        )
+        .unwrap();
+
+        let item = inventory_service::list_items(&conn, None, false).unwrap();
+        assert_eq!(item[0].quantity, 7);
+    }
+
+    #[test]
+    fn create_treatment_with_insufficient_stock_rolls_back_the_treatment_insert() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let item_id = seed_inventory_item(&mut conn);
+        let encounter = create_encounter(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateEncounterInput { patient_id: 1 },
+        )
+        .unwrap();
+
+        let result = create_treatment(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateTreatmentInput {
+                encounter_id: encounter.id,
+                diagnosis_id: None,
+                description: "Appendectomy".to_string(),
+                dosage: None,
+                corrects_treatment_id: None,
+                inventory_item_id: Some(item_id),
+                quantity: Some(1),
+            },
+        );
+
+        assert!(matches!(result, Err(AppError::Conflict { .. })));
+        let bundle = get_by_patient(&conn, 1).unwrap();
+        assert!(bundle.treatments.is_empty());
     }
 
     #[test]
@@ -627,6 +747,8 @@ mod tests {
                 description: "Appendectomy".to_string(),
                 dosage: None,
                 corrects_treatment_id: None,
+                inventory_item_id: None,
+                quantity: None,
             },
         )
         .unwrap();

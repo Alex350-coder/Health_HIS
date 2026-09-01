@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-inventory-create-category"
+description = "Enables the inventory_create_category command without any pre-configured scope."
+commands.allow = ["inventory_create_category"]
+
+[[permission]]
+identifier = "deny-inventory-create-category"
+description = "Denies the inventory_create_category command without any pre-configured scope."
+commands.deny = ["inventory_create_category"]

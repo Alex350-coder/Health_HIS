@@ -33,6 +33,20 @@
     "allow-beds-set-status",
     "allow-beds-list",
     "allow-beds-assign",
-    "allow-beds-release"
+    "allow-beds-release",
+    "allow-operating-rooms-create",
+    "allow-operating-rooms-list",
+    "allow-operating-rooms-list-reservations",
+    "allow-operating-rooms-reserve",
+    "allow-operating-rooms-update-reservation",
+    "allow-operating-rooms-cancel-reservation",
+    "allow-inventory-list-categories",
+    "allow-inventory-create-category",
+    "allow-inventory-list-items",
+    "allow-inventory-create-item",
+    "allow-inventory-record-transaction",
+    "allow-inventory-schedule-maintenance",
+    "allow-inventory-list-transactions",
+    "allow-inventory-list-maintenance-schedules"
   ]
 }

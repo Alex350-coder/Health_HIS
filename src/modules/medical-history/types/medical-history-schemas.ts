@@ -38,13 +38,23 @@ export type CreateDiagnosisInput = z.infer<typeof createDiagnosisSchema>;
 
 export type CreateDiagnosisFormValues = z.input<typeof createDiagnosisSchema>;
 
-export const createTreatmentSchema = z.object({
-  encounterId: z.number().int().positive(),
-  diagnosisId: z.number().int().positive().optional(),
-  description: z.string().min(1, 'Description is required.').max(2000, 'Description is too long.'),
-  dosage: optionalText(200, 'Dosage is too long.'),
-  correctsTreatmentId: z.number().int().positive().optional(),
-});
+export const createTreatmentSchema = z
+  .object({
+    encounterId: z.number().int().positive(),
+    diagnosisId: z.number().int().positive().optional(),
+    description: z
+      .string()
+      .min(1, 'Description is required.')
+      .max(2000, 'Description is too long.'),
+    dosage: optionalText(200, 'Dosage is too long.'),
+    correctsTreatmentId: z.number().int().positive().optional(),
+    inventoryItemId: z.coerce.number().int().positive().optional(),
+    quantity: z.coerce.number().int().positive('Quantity must be positive.').optional(),
+  })
+  .refine((data) => (data.inventoryItemId === undefined) === (data.quantity === undefined), {
+    message: 'Both an inventory item and a quantity are required to record consumption.',
+    path: ['quantity'],
+  });
 
 export type CreateTreatmentInput = z.infer<typeof createTreatmentSchema>;
 

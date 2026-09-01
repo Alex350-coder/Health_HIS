@@ -4,6 +4,8 @@ import { Badge } from '@shared/ui/Badge';
 import { Button } from '@shared/ui/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@shared/ui/Card';
 
+import { useInventoryItemsList } from '@modules/inventory/api/inventory-queries';
+
 import { DiagnosisForm } from './DiagnosisForm';
 import { DiagnosisList } from './DiagnosisList';
 import { DischargeForm } from './DischargeForm';
@@ -71,10 +73,10 @@ function EncounterTimeline({
       </EncounterSection>
       <EncounterSection title="Treatments">
         <TreatmentList treatments={treatments} />
-        <TreatmentForm
+        <TreatmentFormWithInventory
           encounterId={encounter.id}
-          existingDiagnoses={diagnoses}
-          existingTreatments={treatments}
+          diagnoses={diagnoses}
+          treatments={treatments}
         />
       </EncounterSection>
       <EncounterSection title="Evolution notes">
@@ -82,6 +84,28 @@ function EncounterTimeline({
         <EvolutionForm encounterId={encounter.id} />
       </EncounterSection>
     </CardContent>
+  );
+}
+
+/** Supplies the current inventory list to `TreatmentForm` so it can offer a consumption field. */
+function TreatmentFormWithInventory({
+  encounterId,
+  diagnoses,
+  treatments,
+}: {
+  encounterId: number;
+  diagnoses: Diagnosis[];
+  treatments: Treatment[];
+}): JSX.Element {
+  const { data: items } = useInventoryItemsList();
+
+  return (
+    <TreatmentForm
+      encounterId={encounterId}
+      existingDiagnoses={diagnoses}
+      existingTreatments={treatments}
+      existingItems={items ?? []}
+    />
   );
 }
 

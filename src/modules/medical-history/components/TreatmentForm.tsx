@@ -5,6 +5,8 @@ import { formErrorMessage } from '@shared/errors/error-messages';
 import { Button } from '@shared/ui/Button';
 import { FormField } from '@shared/ui/FormField';
 
+import type { InventoryItem } from '@modules/inventory/types/inventory-schemas';
+
 import { useCreateTreatment } from '../api/medical-history-mutations';
 import {
   createTreatmentSchema,
@@ -18,6 +20,7 @@ interface TreatmentFormProps {
   encounterId: number;
   existingDiagnoses: Diagnosis[];
   existingTreatments: Treatment[];
+  existingItems: InventoryItem[];
 }
 
 /** Inline add-treatment form for the open encounter. Corrections reference a prior treatment id. */
@@ -25,6 +28,7 @@ export function TreatmentForm({
   encounterId,
   existingDiagnoses,
   existingTreatments,
+  existingItems,
 }: TreatmentFormProps): JSX.Element {
   const createTreatment = useCreateTreatment();
   const {
@@ -41,8 +45,6 @@ export function TreatmentForm({
     createTreatment.mutate(input, { onSuccess: () => reset({ encounterId }) });
   });
 
-  const errorMessage = formErrorMessage(createTreatment.error);
-
   return (
     <form
       onSubmit={(event) => void onSubmit(event)}
@@ -55,12 +57,28 @@ export function TreatmentForm({
         errors={errors}
         existingDiagnoses={existingDiagnoses}
         existingTreatments={existingTreatments}
+        existingItems={existingItems}
       />
-      {errorMessage ? <p role="alert">{errorMessage}</p> : null}
-      <Button type="submit" size="sm" disabled={createTreatment.isPending}>
-        {createTreatment.isPending ? 'Adding…' : 'Add treatment'}
-      </Button>
+      <TreatmentFormSubmit error={createTreatment.error} isPending={createTreatment.isPending} />
     </form>
+  );
+}
+
+function TreatmentFormSubmit({
+  error,
+  isPending,
+}: {
+  error: unknown;
+  isPending: boolean;
+}): JSX.Element {
+  const errorMessage = formErrorMessage(error);
+  return (
+    <>
+      {errorMessage ? <p role="alert">{errorMessage}</p> : null}
+      <Button type="submit" size="sm" disabled={isPending}>
+        {isPending ? 'Adding…' : 'Add treatment'}
+      </Button>
+    </>
   );
 }
 
@@ -69,11 +87,13 @@ function TreatmentFormFields({
   errors,
   existingDiagnoses,
   existingTreatments,
+  existingItems,
 }: {
   register: UseFormRegister<CreateTreatmentFormValues>;
   errors: FieldErrors<CreateTreatmentFormValues>;
   existingDiagnoses: Diagnosis[];
   existingTreatments: Treatment[];
+  existingItems: InventoryItem[];
 }): JSX.Element {
   return (
     <>
@@ -88,6 +108,7 @@ function TreatmentFormFields({
         errors={errors}
         existingDiagnoses={existingDiagnoses}
         existingTreatments={existingTreatments}
+        existingItems={existingItems}
       />
     </>
   );
@@ -98,11 +119,13 @@ function TreatmentFormRelationFields({
   errors,
   existingDiagnoses,
   existingTreatments,
+  existingItems,
 }: {
   register: UseFormRegister<CreateTreatmentFormValues>;
   errors: FieldErrors<CreateTreatmentFormValues>;
   existingDiagnoses: Diagnosis[];
   existingTreatments: Treatment[];
+  existingItems: InventoryItem[];
 }): JSX.Element {
   return (
     <>
@@ -116,6 +139,7 @@ function TreatmentFormRelationFields({
         errors={errors}
         existingTreatments={existingTreatments}
       />
+      <TreatmentInventoryField register={register} errors={errors} existingItems={existingItems} />
     </>
   );
 }
@@ -173,6 +197,67 @@ function TreatmentCorrectsField({
         {existingTreatments.map((treatment) => (
           <option key={treatment.id} value={treatment.id}>
             #{treatment.id} — {treatment.description}
+          </option>
+        ))}
+      </select>
+    </FormField>
+  );
+}
+
+function TreatmentInventoryField({
+  register,
+  errors,
+  existingItems,
+}: {
+  register: UseFormRegister<CreateTreatmentFormValues>;
+  errors: FieldErrors<CreateTreatmentFormValues>;
+  existingItems: InventoryItem[];
+}): JSX.Element | null {
+  if (existingItems.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <TreatmentInventoryItemField
+        register={register}
+        error={errors.inventoryItemId?.message}
+        existingItems={existingItems}
+      />
+      <FormField
+        id="treatment-inventory-quantity"
+        label="Quantity consumed"
+        error={errors.quantity?.message}
+      >
+        <input
+          id="treatment-inventory-quantity"
+          type="number"
+          min={1}
+          {...register('quantity', { valueAsNumber: true })}
+        />
+      </FormField>
+    </>
+  );
+}
+
+function TreatmentInventoryItemField({
+  register,
+  error,
+  existingItems,
+}: {
+  register: UseFormRegister<CreateTreatmentFormValues>;
+  error: string | undefined;
+  existingItems: InventoryItem[];
+}): JSX.Element {
+  return (
+    <FormField id="treatment-inventory-item" label="Consumes inventory item" error={error}>
+      <select
+        id="treatment-inventory-item"
+        {...register('inventoryItemId', { valueAsNumber: true })}
+      >
+        <option value="">None</option>
+        {existingItems.map((item) => (
+          <option key={item.id} value={item.id}>
+            #{item.id} — {item.name} ({item.quantity} {item.unit} available)
           </option>
         ))}
       </select>
