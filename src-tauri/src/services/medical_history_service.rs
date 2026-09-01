@@ -140,6 +140,18 @@ pub fn get_by_patient(
     })
 }
 
+/// Read-only helper for Billing's treatment-charge aggregation (Plan.md Phase 12) — every
+/// treatment recorded for one encounter.
+pub fn list_treatments_for_encounter(
+    conn: &Connection,
+    encounter_id: i64,
+) -> Result<Vec<Treatment>, AppError> {
+    Ok(encounter_repository::find_treatments_by_encounter(
+        conn,
+        encounter_id,
+    )?)
+}
+
 pub fn create_diagnosis(
     conn: &mut Connection,
     actor_user_id: i64,
