@@ -4,6 +4,7 @@ import { AuthenticatedLayout } from '@shared/components/AuthenticatedLayout';
 
 import { useLogout } from '@modules/auth/api/auth-mutations';
 import { useSessionStore } from '@modules/auth/hooks/use-session-store';
+import { useNotificationsList } from '@modules/notifications/api/notification-queries';
 
 /**
  * Composition root for the authenticated shell: only `app/` may import a specific module's
@@ -13,6 +14,7 @@ export function AuthenticatedLayoutRoute(): JSX.Element {
   const userFullName = useSessionStore((state) => state.user?.fullName);
   const clearSession = useSessionStore((state) => state.clearSession);
   const logout = useLogout();
+  const unreadNotifications = useNotificationsList({ unreadOnly: true });
 
   const handleLogout = (): void => {
     logout.mutate(undefined, { onSuccess: () => clearSession() });
@@ -23,6 +25,7 @@ export function AuthenticatedLayoutRoute(): JSX.Element {
       userFullName={userFullName}
       onLogout={handleLogout}
       logoutPending={logout.isPending}
+      unreadNotificationCount={unreadNotifications.data?.length ?? 0}
     >
       <Outlet />
     </AuthenticatedLayout>
