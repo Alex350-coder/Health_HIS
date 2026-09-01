@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-inventory-list-maintenance-schedules"
+description = "Enables the inventory_list_maintenance_schedules command without any pre-configured scope."
+commands.allow = ["inventory_list_maintenance_schedules"]
+
+[[permission]]
+identifier = "deny-inventory-list-maintenance-schedules"
+description = "Denies the inventory_list_maintenance_schedules command without any pre-configured scope."
+commands.deny = ["inventory_list_maintenance_schedules"]

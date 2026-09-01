@@ -95,3 +95,25 @@ pub fn inventory_schedule_maintenance(
     emitter::emit(&app, "inventory:maintenance:created", &schedule)?;
     Ok(schedule)
 }
+
+#[tauri::command]
+pub fn inventory_list_transactions(
+    state: tauri::State<'_, Mutex<Connection>>,
+    active_session: tauri::State<'_, ActiveSession>,
+    item_id: i64,
+) -> Result<Vec<InventoryTransaction>, crate::errors::AppError> {
+    let conn = lock_connection(&state)?;
+    require_active_session(&conn, &active_session)?;
+    inventory_service::list_transactions_for_item(&conn, item_id)
+}
+
+#[tauri::command]
+pub fn inventory_list_maintenance_schedules(
+    state: tauri::State<'_, Mutex<Connection>>,
+    active_session: tauri::State<'_, ActiveSession>,
+    item_id: i64,
+) -> Result<Vec<MaintenanceSchedule>, crate::errors::AppError> {
+    let conn = lock_connection(&state)?;
+    require_active_session(&conn, &active_session)?;
+    inventory_service::list_maintenance_schedules_for_item(&conn, item_id)
+}

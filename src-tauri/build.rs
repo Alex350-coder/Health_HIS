@@ -40,6 +40,8 @@ const COMMANDS: &[&str] = &[
     "inventory_create_item",
     "inventory_record_transaction",
     "inventory_schedule_maintenance",
+    "inventory_list_transactions",
+    "inventory_list_maintenance_schedules",
 ];
 
 fn main() {

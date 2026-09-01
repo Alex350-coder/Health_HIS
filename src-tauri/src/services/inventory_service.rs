@@ -237,6 +237,26 @@ pub fn list_expiring_items(
     )?)
 }
 
+/// Powers the item detail page's transaction history table (Routes.md).
+pub fn list_transactions_for_item(
+    conn: &Connection,
+    item_id: i64,
+) -> Result<Vec<InventoryTransaction>, AppError> {
+    Ok(inventory_repository::list_transactions_for_item(
+        conn, item_id,
+    )?)
+}
+
+/// Powers the item detail page's maintenance schedule list (Routes.md).
+pub fn list_maintenance_schedules_for_item(
+    conn: &Connection,
+    item_id: i64,
+) -> Result<Vec<MaintenanceSchedule>, AppError> {
+    Ok(inventory_repository::list_maintenance_schedules_for_item(
+        conn, item_id,
+    )?)
+}
+
 fn find_category_or_die(conn: &Connection, id: i64) -> Result<InventoryCategory, AppError> {
     inventory_repository::find_category_by_id(conn, id)?
         .ok_or_else(|| unexpected_vanished("inventory_category", id))
@@ -485,5 +505,53 @@ mod tests {
         let expiring = list_expiring_items(&conn, "2026-12-31").unwrap();
 
         assert_eq!(expiring.len(), 1);
+    }
+
+    #[test]
+    fn list_transactions_for_item_returns_only_that_items_history() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let category = create_category(&mut conn, ACTOR_USER_ID, &create_category_input()).unwrap();
+        let item = create_item(&mut conn, ACTOR_USER_ID, &create_item_input(category.id)).unwrap();
+        record_transaction(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateInventoryTransactionInput {
+                item_id: item.id,
+                quantity_delta: 20,
+                reason: "restock".to_string(),
+                encounter_id: None,
+                treatment_id: None,
+            },
+        )
+        .unwrap();
+
+        let transactions = list_transactions_for_item(&conn, item.id).unwrap();
+
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(transactions[0].item_id, item.id);
+    }
+
+    #[test]
+    fn list_maintenance_schedules_for_item_returns_only_that_items_schedules() {
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let category = create_category(&mut conn, ACTOR_USER_ID, &create_category_input()).unwrap();
+        let item = create_item(&mut conn, ACTOR_USER_ID, &create_item_input(category.id)).unwrap();
+        schedule_maintenance(
+            &mut conn,
+            ACTOR_USER_ID,
+            &ScheduleMaintenanceInput {
+                inventory_item_id: item.id,
+                scheduled_date: "2026-02-01".to_string(),
+                notes: None,
+            },
+        )
+        .unwrap();
+
+        let schedules = list_maintenance_schedules_for_item(&conn, item.id).unwrap();
+
+        assert_eq!(schedules.len(), 1);
+        assert_eq!(schedules[0].inventory_item_id, item.id);
     }
 }

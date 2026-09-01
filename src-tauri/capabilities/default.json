@@ -45,6 +45,8 @@
     "allow-inventory-list-items",
     "allow-inventory-create-item",
     "allow-inventory-record-transaction",
-    "allow-inventory-schedule-maintenance"
+    "allow-inventory-schedule-maintenance",
+    "allow-inventory-list-transactions",
+    "allow-inventory-list-maintenance-schedules"
   ]
 }
