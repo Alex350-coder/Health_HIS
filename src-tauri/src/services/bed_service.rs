@@ -154,6 +154,18 @@ pub fn list(conn: &Connection, room_id: Option<i64>) -> Result<Vec<BedSummary>, 
     )?)
 }
 
+/// Read-only helper for Billing's room-charge aggregation (Plan.md Phase 12) — every bed
+/// assignment for one encounter, released or still active.
+pub fn list_assignments_for_encounter(
+    conn: &Connection,
+    encounter_id: i64,
+) -> Result<Vec<BedAssignment>, AppError> {
+    Ok(bed_repository::find_assignments_by_encounter_id(
+        conn,
+        encounter_id,
+    )?)
+}
+
 /// Enforces the bed-availability business rule (Database.md Section 3.3): a bed may have at
 /// most one active assignment. Checked explicitly here rather than inferred from the partial
 /// unique index violation, since `AppError::from(DbError)` maps every DB error generically.

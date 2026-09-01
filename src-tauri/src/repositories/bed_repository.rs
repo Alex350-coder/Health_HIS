@@ -151,6 +151,20 @@ pub fn find_active_assignment_by_bed_id(
     .map_err(DbError::from)
 }
 
+/// Backs Billing's room-charge aggregation (Plan.md Phase 12) — every assignment (released or
+/// still active) for one encounter, in assignment order.
+pub fn find_assignments_by_encounter_id(
+    conn: &Connection,
+    encounter_id: i64,
+) -> Result<Vec<BedAssignment>, DbError> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {ASSIGNMENT_COLUMNS} FROM bed_assignments \
+         WHERE encounter_id = ?1 ORDER BY assigned_at"
+    ))?;
+    let rows = stmt.query_map(params![encounter_id], map_row_to_assignment)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
+}
+
 pub fn release_assignment(conn: &Connection, id: i64) -> Result<Option<BedAssignment>, DbError> {
     conn.execute(
         "UPDATE bed_assignments SET released_at = datetime('now') \
@@ -618,6 +632,38 @@ mod tests {
         assert!(find_active_assignment_by_bed_id(&conn, bed_id)
             .unwrap()
             .is_none());
+    }
+
+    #[test]
+    fn find_assignments_by_encounter_id_returns_released_and_active_rows() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let user_id = seed_user(&conn);
+        let patient_id = seed_patient(&conn);
+        let encounter_id = seed_encounter(&conn, patient_id, user_id);
+        let floor_id = insert_floor(&conn, &sample_new_floor()).unwrap();
+        let room_id = insert_room(&conn, &sample_new_room(floor_id)).unwrap();
+        let bed_id = insert_bed(
+            &conn,
+            &NewBed {
+                room_id,
+                label: "Bed 1",
+            },
+        )
+        .unwrap();
+        let new_assignment = NewAssignment {
+            bed_id,
+            patient_id,
+            encounter_id,
+            assigned_by_user_id: user_id,
+        };
+        let released_id = insert_assignment(&conn, &new_assignment).unwrap();
+        release_assignment(&conn, released_id).unwrap();
+        insert_assignment(&conn, &new_assignment).unwrap();
+
+        let assignments = find_assignments_by_encounter_id(&conn, encounter_id).unwrap();
+
+        assert_eq!(assignments.len(), 2);
     }
 
     #[test]
