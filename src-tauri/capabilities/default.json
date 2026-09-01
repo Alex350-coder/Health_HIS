@@ -49,6 +49,9 @@
     "allow-inventory-list-transactions",
     "allow-inventory-list-maintenance-schedules",
     "allow-notifications-list",
-    "allow-notifications-mark-read"
+    "allow-notifications-mark-read",
+    "allow-billing-generate-simulation",
+    "allow-billing-get-simulation",
+    "allow-billing-finalize-simulation"
   ]
 }

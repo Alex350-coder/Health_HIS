@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-billing-get-simulation"
+description = "Enables the billing_get_simulation command without any pre-configured scope."
+commands.allow = ["billing_get_simulation"]
+
+[[permission]]
+identifier = "deny-billing-get-simulation"
+description = "Denies the billing_get_simulation command without any pre-configured scope."
+commands.deny = ["billing_get_simulation"]
