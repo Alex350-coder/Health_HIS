@@ -1,5 +1,6 @@
 pub mod audit_repository;
 pub mod bed_repository;
+pub mod billing_repository;
 pub mod encounter_repository;
 pub mod inventory_repository;
 pub mod notification_repository;
