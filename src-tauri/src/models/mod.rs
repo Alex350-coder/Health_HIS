@@ -1,5 +1,6 @@
 pub mod audit;
 pub mod bed;
+pub mod billing;
 pub mod encounter;
 pub mod inventory;
 pub mod notification;
@@ -12,6 +13,7 @@ pub use audit::AuditLogEntry;
 pub use bed::{
     ActiveAssignmentRef, Bed, BedAssignment, BedSummary, Floor, FloorLayout, Room, RoomStatus,
 };
+pub use billing::{BillingItem, BillingSimulation};
 pub use encounter::{Diagnosis, Encounter, Evolution, Treatment};
 pub use inventory::{InventoryCategory, InventoryItem, InventoryTransaction, MaintenanceSchedule};
 pub use notification::Notification;

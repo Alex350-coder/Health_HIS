@@ -45,6 +45,10 @@ pub fn embedded_migrations() -> &'static [(&'static str, &'static str)] {
             "0008_notifications.sql",
             include_str!("../../migrations/0008_notifications.sql"),
         ),
+        (
+            "0009_billing.sql",
+            include_str!("../../migrations/0009_billing.sql"),
+        ),
     ]
 }
 
@@ -123,7 +127,7 @@ mod tests {
 
         run_migrations(&conn, embedded_migrations()).unwrap();
 
-        assert_eq!(migration_count(&conn), 9);
+        assert_eq!(migration_count(&conn), 10);
         let version: String = conn
             .query_row(
                 "SELECT version FROM schema_migrations ORDER BY version LIMIT 1",
@@ -142,7 +146,7 @@ mod tests {
         run_migrations(&conn, embedded_migrations()).unwrap();
         run_migrations(&conn, embedded_migrations()).unwrap();
 
-        assert_eq!(migration_count(&conn), 9);
+        assert_eq!(migration_count(&conn), 10);
     }
 
     /// Rules.md 9.6 — applies every migration to an empty file, then inserts one row into every
@@ -185,6 +189,36 @@ mod tests {
         conn.execute(
             "INSERT INTO notifications (type, message) VALUES ('other', 'test notification')",
             [],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO patients (medical_record_number, full_name, date_of_birth, sex) \
+             VALUES ('MRN-0001', 'Test Patient', '1990-01-01', 'unknown')",
+            [],
+        )
+        .unwrap();
+        let patient_id = conn.last_insert_rowid();
+
+        conn.execute(
+            "INSERT INTO encounters (patient_id, created_by_user_id) VALUES (?1, ?2)",
+            [patient_id, user_id],
+        )
+        .unwrap();
+        let encounter_id = conn.last_insert_rowid();
+
+        conn.execute(
+            "INSERT INTO billing_simulations (encounter_id, generated_by_user_id) \
+             VALUES (?1, ?2)",
+            [encounter_id, user_id],
+        )
+        .unwrap();
+        let simulation_id = conn.last_insert_rowid();
+
+        conn.execute(
+            "INSERT INTO billing_items (billing_simulation_id, description, source, amount) \
+             VALUES (?1, 'test item', 'other', 1.0)",
+            [simulation_id],
         )
         .unwrap();
     }
