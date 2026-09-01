@@ -9,12 +9,27 @@ use rusqlite::Connection;
 use crate::commands::{lock_connection, require_active_session};
 use crate::events::emitter;
 use crate::models::{InventoryCategory, InventoryItem, InventoryTransaction, MaintenanceSchedule};
-use crate::services::inventory_service;
+use crate::services::{inventory_service, notification_service};
 use crate::validation::inventory_validation::{
     CreateInventoryCategoryInput, CreateInventoryItemInput, CreateInventoryTransactionInput,
     ScheduleMaintenanceInput,
 };
 use crate::ActiveSession;
+
+/// Runs the inventory-alert detection sweep and emits one `notifications:notification:created`
+/// event per newly-created row, so the top-bar bell updates without a manual refresh
+/// (StateManagement.md / `shared/lib/event-query-map.ts`). Called after every Inventory mutation
+/// command — see `notification_service::check_inventory_alerts`'s doc comment for why this lives
+/// here rather than inside `inventory_service.rs`.
+fn raise_inventory_alerts(
+    app: &tauri::AppHandle,
+    conn: &mut Connection,
+) -> Result<(), crate::errors::AppError> {
+    for notification in notification_service::check_inventory_alerts(conn)? {
+        emitter::emit(app, "notifications:notification:created", &notification)?;
+    }
+    Ok(())
+}
 
 #[tauri::command]
 pub fn inventory_list_categories(
@@ -63,6 +78,7 @@ pub fn inventory_create_item(
     let authenticated = require_active_session(&conn, &active_session)?;
     let item = inventory_service::create_item(&mut conn, authenticated.user_id, &input)?;
     emitter::emit(&app, "inventory:item:created", &item)?;
+    raise_inventory_alerts(&app, &mut conn)?;
     Ok(item)
 }
 
@@ -78,6 +94,7 @@ pub fn inventory_record_transaction(
     let transaction =
         inventory_service::record_transaction(&mut conn, authenticated.user_id, &input)?;
     emitter::emit(&app, "inventory:transaction:created", &transaction)?;
+    raise_inventory_alerts(&app, &mut conn)?;
     Ok(transaction)
 }
 
@@ -93,6 +110,7 @@ pub fn inventory_schedule_maintenance(
     let schedule =
         inventory_service::schedule_maintenance(&mut conn, authenticated.user_id, &input)?;
     emitter::emit(&app, "inventory:maintenance:created", &schedule)?;
+    raise_inventory_alerts(&app, &mut conn)?;
     Ok(schedule)
 }
 
