@@ -72,6 +72,11 @@ pub fn run() {
             commands::inventory_commands::inventory_schedule_maintenance,
             commands::inventory_commands::inventory_list_transactions,
             commands::inventory_commands::inventory_list_maintenance_schedules,
+            commands::notification_commands::notifications_list,
+            commands::notification_commands::notifications_mark_read,
+            commands::billing_commands::billing_generate_simulation,
+            commands::billing_commands::billing_get_simulation,
+            commands::billing_commands::billing_finalize_simulation,
         ])
         .setup(|app| {
             let data_dir = app

@@ -210,6 +210,20 @@ pub fn list_transactions_for_item(
     rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
 }
 
+/// Backs Billing's inventory-charge aggregation (Plan.md Phase 12) — every transaction tied to
+/// one encounter, regardless of `reason`; the caller decides which reasons are billable.
+pub fn list_transactions_by_encounter_id(
+    conn: &Connection,
+    encounter_id: i64,
+) -> Result<Vec<InventoryTransaction>, DbError> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {TRANSACTION_COLUMNS} FROM inventory_transactions \
+         WHERE encounter_id = ?1 ORDER BY created_at"
+    ))?;
+    let rows = stmt.query_map(params![encounter_id], map_row_to_transaction)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
+}
+
 pub fn insert_maintenance_schedule(
     conn: &Connection,
     new_schedule: &NewMaintenanceSchedule,
@@ -237,6 +251,22 @@ pub fn find_maintenance_schedule_by_id(
     )
     .optional()
     .map_err(DbError::from)
+}
+
+/// Every incomplete maintenance schedule due on or before `before_date` (inclusive,
+/// `YYYY-MM-DD`) — the read-only detection Phase 11 (Notifications) calls to decide when to
+/// raise a maintenance-due alert. Mirrors `find_expiring_items`.
+pub fn find_due_maintenance_schedules(
+    conn: &Connection,
+    before_date: &str,
+) -> Result<Vec<MaintenanceSchedule>, DbError> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {MAINTENANCE_COLUMNS} FROM maintenance_schedules \
+         WHERE completed_date IS NULL AND scheduled_date <= ?1 \
+         ORDER BY scheduled_date"
+    ))?;
+    let rows = stmt.query_map(params![before_date], map_row_to_maintenance_schedule)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
 }
 
 pub fn list_maintenance_schedules_for_item(
@@ -319,6 +349,25 @@ mod tests {
             "INSERT INTO users (full_name, username, password_hash, role) \
              VALUES ('Test Admin', 'test-admin', 'argon2id$dummy', 'admin')",
             [],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    fn seed_patient(conn: &Connection) -> i64 {
+        conn.execute(
+            "INSERT INTO patients (medical_record_number, full_name, date_of_birth, sex) \
+             VALUES ('MRN-1', 'Jane Doe', '1990-01-01', 'female')",
+            [],
+        )
+        .unwrap();
+        conn.last_insert_rowid()
+    }
+
+    fn seed_encounter(conn: &Connection, patient_id: i64, created_by_user_id: i64) -> i64 {
+        conn.execute(
+            "INSERT INTO encounters (patient_id, created_by_user_id) VALUES (?1, ?2)",
+            params![patient_id, created_by_user_id],
         )
         .unwrap();
         conn.last_insert_rowid()
@@ -468,6 +517,93 @@ mod tests {
         assert_eq!(transactions.len(), 1);
         assert_eq!(transactions[0].quantity_delta, 100);
         assert_eq!(transactions[0].reason, "restock");
+    }
+
+    #[test]
+    fn list_transactions_by_encounter_id_returns_only_that_encounters_rows() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let category_id = seed_category(&conn);
+        let item_id = seed_item(&conn, category_id);
+        let user_id = seed_user(&conn);
+        let patient_id = seed_patient(&conn);
+        let encounter_id = seed_encounter(&conn, patient_id, user_id);
+
+        insert_transaction(
+            &conn,
+            &NewInventoryTransaction {
+                item_id,
+                quantity_delta: -2,
+                reason: "consumption",
+                encounter_id: Some(encounter_id),
+                treatment_id: None,
+                performed_by_user_id: user_id,
+            },
+        )
+        .unwrap();
+        insert_transaction(
+            &conn,
+            &NewInventoryTransaction {
+                item_id,
+                quantity_delta: 100,
+                reason: "restock",
+                encounter_id: None,
+                treatment_id: None,
+                performed_by_user_id: user_id,
+            },
+        )
+        .unwrap();
+
+        let transactions = list_transactions_by_encounter_id(&conn, encounter_id).unwrap();
+
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(transactions[0].reason, "consumption");
+    }
+
+    #[test]
+    fn find_due_maintenance_schedules_excludes_completed_and_far_future_schedules() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let category_id = seed_category(&conn);
+        let item_id = seed_item(&conn, category_id);
+
+        let due_id = insert_maintenance_schedule(
+            &conn,
+            &NewMaintenanceSchedule {
+                inventory_item_id: item_id,
+                scheduled_date: "2026-01-05",
+                notes: None,
+            },
+        )
+        .unwrap();
+        insert_maintenance_schedule(
+            &conn,
+            &NewMaintenanceSchedule {
+                inventory_item_id: item_id,
+                scheduled_date: "2099-01-01",
+                notes: None,
+            },
+        )
+        .unwrap();
+        let completed_id = insert_maintenance_schedule(
+            &conn,
+            &NewMaintenanceSchedule {
+                inventory_item_id: item_id,
+                scheduled_date: "2026-01-01",
+                notes: None,
+            },
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE maintenance_schedules SET completed_date = '2026-01-02' WHERE id = ?1",
+            params![completed_id],
+        )
+        .unwrap();
+
+        let due = find_due_maintenance_schedules(&conn, "2026-01-10").unwrap();
+
+        assert_eq!(due.len(), 1);
+        assert_eq!(due[0].id, due_id);
     }
 
     #[test]

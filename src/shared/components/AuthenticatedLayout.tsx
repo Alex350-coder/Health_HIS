@@ -21,6 +21,7 @@ interface AuthenticatedLayoutProps {
   userFullName: string | undefined;
   onLogout: () => void;
   logoutPending: boolean;
+  unreadNotificationCount: number;
   children: ReactNode;
 }
 
@@ -90,21 +91,37 @@ interface TopBarProps {
   userFullName: string | undefined;
   onLogout: () => void;
   logoutPending: boolean;
+  unreadNotificationCount: number;
 }
 
-function TopBar({ userFullName, onLogout, logoutPending }: TopBarProps): JSX.Element {
+function NotificationBell({ unreadCount }: { unreadCount: number }): JSX.Element {
+  const label =
+    unreadCount > 0 ? `View notifications (${String(unreadCount)} unread)` : 'View notifications';
+  return (
+    <Link
+      to="/notifications"
+      aria-label={label}
+      className="relative rounded-md p-2 text-text-secondary hover:bg-surface hover:text-text-primary"
+    >
+      <Bell className="size-5" aria-hidden="true" />
+      {unreadCount > 0 ? (
+        <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-danger text-[10px] font-semibold text-white">
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+function TopBar({
+  userFullName,
+  onLogout,
+  logoutPending,
+  unreadNotificationCount,
+}: TopBarProps): JSX.Element {
   return (
     <header className="flex items-center justify-end gap-4 border-b border-border-default bg-surface-raised px-6 py-3">
-      <button
-        type="button"
-        aria-label="Notifications"
-        className="relative rounded-md p-2 text-text-secondary hover:bg-surface hover:text-text-primary"
-      >
-        <Bell className="size-5" aria-hidden="true" />
-        <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-danger text-[10px] font-semibold text-white">
-          0
-        </span>
-      </button>
+      <NotificationBell unreadCount={unreadNotificationCount} />
       {userFullName !== undefined ? (
         <span className="text-sm font-medium text-text-primary">{userFullName}</span>
       ) : null}
@@ -117,21 +134,28 @@ function TopBar({ userFullName, onLogout, logoutPending }: TopBarProps): JSX.Ele
 
 /**
  * Full app shell (UI.md Section 2): persistent sidebar across all 8 top-level workflow routes plus
- * a separated admin group, and a top bar with user identity, a notification-bell stub (real unread
- * count wired in Phase 11), and logout. Presentational only — session state and the logout action
- * are owned by the caller (`shared/` never depends on a specific module, Architecture.md).
+ * a separated admin group, and a top bar with user identity, a notification bell linking to
+ * `/notifications` with a real unread-count badge, and logout. Presentational only — session state,
+ * the logout action, and the unread count are owned by the caller (`shared/` never depends on a
+ * specific module, Architecture.md).
  */
 export function AuthenticatedLayout({
   userFullName,
   onLogout,
   logoutPending,
+  unreadNotificationCount,
   children,
 }: AuthenticatedLayoutProps): JSX.Element {
   return (
     <div className="flex min-h-dvh bg-surface">
       <Sidebar />
       <div className="flex flex-1 flex-col">
-        <TopBar userFullName={userFullName} onLogout={onLogout} logoutPending={logoutPending} />
+        <TopBar
+          userFullName={userFullName}
+          onLogout={onLogout}
+          logoutPending={logoutPending}
+          unreadNotificationCount={unreadNotificationCount}
+        />
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>

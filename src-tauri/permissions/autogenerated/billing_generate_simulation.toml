@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-billing-generate-simulation"
+description = "Enables the billing_generate_simulation command without any pre-configured scope."
+commands.allow = ["billing_generate_simulation"]
+
+[[permission]]
+identifier = "deny-billing-generate-simulation"
+description = "Denies the billing_generate_simulation command without any pre-configured scope."
+commands.deny = ["billing_generate_simulation"]

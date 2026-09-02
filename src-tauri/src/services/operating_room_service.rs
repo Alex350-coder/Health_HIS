@@ -234,6 +234,15 @@ pub fn list_reservations(
     )?)
 }
 
+/// Read-only helper for Billing's OR-charge aggregation (Plan.md Phase 12) — every reservation
+/// for one encounter, including cancelled ones.
+pub fn list_reservations_for_encounter(
+    conn: &Connection,
+    encounter_id: i64,
+) -> Result<Vec<OrReservation>, AppError> {
+    Ok(operating_room_repository::find_reservations_by_encounter_id(conn, encounter_id)?)
+}
+
 fn find_operating_room_or_die(conn: &Connection, id: i64) -> Result<OperatingRoom, AppError> {
     operating_room_repository::find_operating_room_by_id(conn, id)?
         .ok_or_else(|| unexpected_vanished("operating_room", id))

@@ -167,6 +167,20 @@ pub fn find_overlapping_reservations(
     rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
 }
 
+/// Backs Billing's OR-charge aggregation (Plan.md Phase 12) — every reservation for one
+/// encounter, including cancelled ones; the caller decides which statuses are billable.
+pub fn find_reservations_by_encounter_id(
+    conn: &Connection,
+    encounter_id: i64,
+) -> Result<Vec<OrReservation>, DbError> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {OR_RESERVATION_COLUMNS} FROM or_reservations \
+         WHERE encounter_id = ?1 ORDER BY scheduled_start"
+    ))?;
+    let rows = stmt.query_map(params![encounter_id], map_row_to_reservation)?;
+    rows.collect::<Result<Vec<_>, _>>().map_err(DbError::from)
+}
+
 pub fn update_reservation_status(
     conn: &Connection,
     id: i64,
@@ -372,6 +386,33 @@ mod tests {
         );
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn find_reservations_by_encounter_id_returns_only_that_encounters_rows() {
+        let dir = tempdir().unwrap();
+        let conn = open_migrated(dir.path());
+        let user_id = seed_user(&conn);
+        let patient_id = seed_patient(&conn);
+        let encounter_id = seed_encounter(&conn, patient_id, user_id);
+        let other_encounter_id = seed_encounter(&conn, patient_id, user_id);
+        let operating_room_id = seed_operating_room(&conn);
+
+        insert_reservation(
+            &conn,
+            &sample_reservation(operating_room_id, patient_id, encounter_id, user_id),
+        )
+        .unwrap();
+        insert_reservation(
+            &conn,
+            &sample_reservation(operating_room_id, patient_id, other_encounter_id, user_id),
+        )
+        .unwrap();
+
+        let reservations = find_reservations_by_encounter_id(&conn, encounter_id).unwrap();
+
+        assert_eq!(reservations.len(), 1);
+        assert_eq!(reservations[0].encounter_id, encounter_id);
     }
 
     #[test]

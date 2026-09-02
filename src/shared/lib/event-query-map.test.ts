@@ -29,6 +29,7 @@ describe('EVENT_QUERY_MAP — IPC.md event catalog correspondence', () => {
     'inventory:item:created',
     'inventory:transaction:created',
     'inventory:maintenance:created',
+    'notifications:notification:created',
   ])('has an entry for %s', (eventName) => {
     expect(EVENT_QUERY_MAP[eventName]).toBeDefined();
     expect(EVENT_QUERY_MAP[eventName]?.length).toBeGreaterThan(0);

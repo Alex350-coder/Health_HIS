@@ -21,6 +21,7 @@ async function renderLayout(
           /* default no-op */
         }}
         logoutPending={false}
+        unreadNotificationCount={0}
         {...props}
       >
         <p>page content</p>
@@ -53,10 +54,19 @@ describe('AuthenticatedLayout', () => {
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
   });
 
-  it('renders a notification bell with an unread-count stub', async () => {
+  it('renders a notification bell linking to /notifications with no badge when there are no unread notifications', async () => {
     await renderLayout();
 
-    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+    const bell = screen.getByRole('link', { name: 'View notifications' });
+    expect(bell).toBeInTheDocument();
+    expect(bell).toHaveAttribute('href', '/notifications');
+  });
+
+  it('renders the unread count on the notification bell badge', async () => {
+    await renderLayout({ unreadNotificationCount: 3 });
+
+    expect(screen.getByRole('link', { name: 'View notifications (3 unread)' })).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
   });
 
   it('calls onLogout when the logout button is clicked', async () => {
