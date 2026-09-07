@@ -9,7 +9,9 @@
 //! `CreateTreatmentInput.inventory_item_id`/`quantity` are set, it calls
 //! `inventory_service::record_transaction_core` inside its own transaction so the treatment
 //! insert and the inventory consumption commit or roll back together — insufficient stock
-//! (`AppError::Conflict`) rolls back the treatment insert too.
+//! (`AppError::Conflict`) rolls back the treatment insert too. `discharge_encounter` follows the
+//! same composition pattern: it calls `bed_service::release_core` for any still-active bed
+//! assignment so the encounter closure and the bed release commit or roll back together.
 
 use rusqlite::{Connection, ErrorCode};
 use serde::Serialize;
@@ -22,6 +24,7 @@ use crate::repositories::encounter_repository::{
     self, DischargeEncounter, NewDiagnosis, NewEncounter, NewEvolution, NewTreatment,
 };
 use crate::services::audit_service::{self, RecordInput};
+use crate::services::bed_service;
 use crate::services::inventory_service;
 use crate::validation::medical_history_validation::{
     self, CreateDiagnosisInput, CreateEncounterInput, CreateEvolutionInput, CreateTreatmentInput,
@@ -79,6 +82,13 @@ pub fn discharge_encounter(
 
     let tx = conn.transaction().map_err(DbError::from)?;
     require_open_encounter(&tx, input.encounter_id)?;
+
+    for assignment in bed_service::list_assignments_for_encounter(&tx, input.encounter_id)? {
+        if assignment.released_at.is_none() {
+            bed_service::release_core(&tx, actor_user_id, &assignment)?;
+        }
+    }
+
     let encounter = encounter_repository::discharge_encounter(
         &tx,
         input.encounter_id,
