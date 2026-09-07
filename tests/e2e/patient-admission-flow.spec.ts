@@ -178,4 +178,25 @@ describe('Patient admission flow — through discharge', () => {
     await $('button=Finalize').click();
     await expect($('*=Finalized')).toBeDisplayed();
   });
+
+  it('discharges the encounter and releases the bed', async () => {
+    await browser.url('/patients/1/medical-history');
+
+    await $('button=Discharge').click();
+    await $('button=Confirm discharge').click();
+
+    await expect($('*=Past encounters')).toBeDisplayed();
+
+    await browser.url('/beds');
+    await expect($('button=Release')).not.toBeDisplayed();
+    await expect($('*=available')).toBeDisplayed();
+  });
+
+  it('keeps the full history queryable after discharge', async () => {
+    await browser.url('/patients/1/medical-history');
+
+    await expect($('*=Acute appendicitis')).toBeDisplayed();
+    await expect($('*=Appendectomy')).toBeDisplayed();
+    await expect($('*=Patient stable post-op, vitals normal.')).toBeDisplayed();
+  });
 });
