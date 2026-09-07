@@ -12,7 +12,16 @@ export const EVENT_QUERY_MAP: Record<string, QueryKey[]> = {
     ['patients', 'detail'],
   ],
   'medical-history:encounter:created': [['medical-history'], ['patients', 'detail']],
-  'medical-history:encounter:discharged': [['medical-history'], ['patients', 'detail']],
+  // Discharge also releases the encounter's bed (Plan.md Phase 13 Task 13.1) via
+  // bed_service::release_core, which doesn't emit its own beds:assignment:released event —
+  // invalidate ['beds']/['hospital-map'] here so an open Beds or Hospital Map view still reflects
+  // the release.
+  'medical-history:encounter:discharged': [
+    ['medical-history'],
+    ['patients', 'detail'],
+    ['beds'],
+    ['hospital-map'],
+  ],
   'medical-history:diagnosis:created': [['medical-history']],
   // A treatment may optionally consume inventory stock (Database.md 3.5's `treatment_id`
   // linkage) — invalidate ['inventory'] too so an open Inventory view reflects the consumption.
