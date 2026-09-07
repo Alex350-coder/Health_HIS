@@ -3,7 +3,7 @@
 //! the same tables (Architecture.md Section 3 — Hospital Map never writes, has no service here).
 //! Thin command layer calls into this module only.
 
-use rusqlite::Connection;
+use rusqlite::{Connection, Transaction};
 
 use crate::db::DbError;
 use crate::errors::app_error::correlation_id;
@@ -234,23 +234,38 @@ pub fn release(
         });
     }
 
-    bed_repository::release_assignment(&tx, input.bed_assignment_id)?;
-    bed_repository::update_bed_status(&tx, assignment.bed_id, "available")?;
+    release_core(&tx, actor_user_id, &assignment)?;
+    tx.commit().map_err(DbError::from)?;
+
+    find_assignment_or_die(conn, input.bed_assignment_id)
+}
+
+/// Releases one already-active assignment and frees its bed, inside the caller's transaction —
+/// no not-found/already-released checks (the caller is expected to have selected an active
+/// assignment) and no commit of its own. Used by `release` above and by
+/// `medical_history_service::discharge_encounter` to auto-release a discharged encounter's bed
+/// in the same transaction as the encounter-status write, mirroring
+/// `inventory_service::record_transaction_core`'s composition pattern.
+pub(crate) fn release_core(
+    tx: &Transaction,
+    actor_user_id: i64,
+    assignment: &BedAssignment,
+) -> Result<(), AppError> {
+    bed_repository::release_assignment(tx, assignment.id)?;
+    bed_repository::update_bed_status(tx, assignment.bed_id, "available")?;
     audit_service::record(
-        &tx,
+        tx,
         &RecordInput {
             user_id: Some(actor_user_id),
             action: "bed.release",
             entity_type: "bed_assignment",
-            entity_id: Some(input.bed_assignment_id),
+            entity_id: Some(assignment.id),
             before_state: None,
             after_state: None,
             result: "success",
         },
     )?;
-    tx.commit().map_err(DbError::from)?;
-
-    find_assignment_or_die(conn, input.bed_assignment_id)
+    Ok(())
 }
 
 fn find_assignment_or_die(conn: &Connection, id: i64) -> Result<BedAssignment, AppError> {
