@@ -3,15 +3,17 @@ import { expect } from '@wdio/globals';
 import { resetDatabase } from './support/reset-database';
 
 /**
- * Exercises the workflow chain up through bed assignment (Plan.md Phase 8 scope: "through bed
- * assignment"; Phase 13 extends this same file through discharge). Runs against the real,
- * freshly-reset SQLCipher database — no seeded/mock data (Rules.md 17.1) — so IDs are the
- * deterministic first auto-increment values (1) a clean database produces.
+ * Exercises the full patient-centered workflow chain (Testing.md Section 4 scenario 2): bed
+ * assignment (Plan.md Phase 8 scope) through diagnosis, treatment with inventory consumption,
+ * evolution, OR scheduling, billing simulation, discharge, and a post-discharge history re-query
+ * (Plan.md Phase 13 scope). Runs against the real, freshly-reset SQLCipher database — no
+ * seeded/mock data (Rules.md 17.1) — so IDs are the deterministic first auto-increment values
+ * (1) a clean database produces.
  *
  * Also validates the Phase 8 Finding A fix end-to-end: after `beds:assignment:created`, the
  * Hospital Map room-status panel reflects occupancy without a manual page reload.
  */
-describe('Patient admission flow — through bed assignment', () => {
+describe('Patient admission flow — through discharge', () => {
   before(async () => {
     resetDatabase();
     await browser.reloadSession();
@@ -45,6 +47,30 @@ describe('Patient admission flow — through bed assignment', () => {
     await $('#bed-label').setValue('Bed 101-A');
     await $('button=Add bed').click();
     await expect($('*=Bed 101-A')).toBeDisplayed();
+  });
+
+  it('promotes the room to an operating room from the facility page', async () => {
+    await browser.url('/facility');
+
+    await $('#operating-room-room-id').setValue('1');
+    await $('button=Promote to OR').click();
+    await expect($('*=Room 101')).toBeDisplayed();
+  });
+
+  it('creates an inventory category and item', async () => {
+    await browser.url('/inventory');
+
+    await $('#inventory-category-name').setValue('Consumables');
+    await $('#inventory-category-kind').selectByAttribute('value', 'supply');
+    await $('button=Add category').click();
+    await expect($('*=Consumables')).toBeDisplayed();
+
+    await $('#inventory-item-category').selectByAttribute('value', '1');
+    await $('#inventory-item-name').setValue('Gauze Pads');
+    await $('#inventory-item-unit').setValue('box');
+    await $('#inventory-item-reorder-threshold').setValue('5');
+    await $('button=Add item').click();
+    await expect($('*=Gauze Pads')).toBeDisplayed();
   });
 
   it('registers a patient', async () => {
