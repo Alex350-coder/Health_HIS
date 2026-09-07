@@ -152,4 +152,30 @@ describe('Patient admission flow — through discharge', () => {
 
     await expect($('*=Patient stable post-op, vitals normal.')).toBeDisplayed();
   });
+
+  it('schedules an operating room reservation', async () => {
+    await browser.url('/operating-rooms');
+
+    await $('select').selectByAttribute('value', '1');
+    await $('button=New reservation').click();
+
+    await $('#reserve-or-patient-id').setValue('1');
+    await $('#reserve-or-encounter-id').setValue('1');
+    await $('#reserve-or-procedure-description').setValue('Appendectomy');
+    await $('#reserve-or-scheduled-start').setValue('2026-01-01T08:00');
+    await $('#reserve-or-scheduled-end').setValue('2026-01-01T10:00');
+    await $('button=Reserve').click();
+
+    await expect($('*=Appendectomy')).toBeDisplayed();
+  });
+
+  it('generates and finalizes the billing simulation', async () => {
+    await browser.url('/patients/1/billing');
+
+    await $('button=Generate Simulation').click();
+    await expect($('button=Finalize')).toBeDisplayed();
+
+    await $('button=Finalize').click();
+    await expect($('*=Finalized')).toBeDisplayed();
+  });
 });
