@@ -432,6 +432,90 @@ mod tests {
     }
 
     #[test]
+    fn discharge_encounter_releases_a_still_active_bed_assignment() {
+        use crate::repositories::bed_repository;
+        use crate::validation::bed_validation::{
+            AssignBedInput, CreateBedInput, CreateFloorInput, CreateRoomInput,
+        };
+
+        let dir = tempdir().unwrap();
+        let mut conn = open_migrated(dir.path());
+        let encounter = create_encounter(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateEncounterInput { patient_id: 1 },
+        )
+        .unwrap();
+
+        let floor = bed_service::create_floor(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateFloorInput {
+                name: "Floor 1".to_string(),
+                level_order: 0,
+            },
+        )
+        .unwrap();
+        let room = bed_service::create_room(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateRoomInput {
+                floor_id: floor.id,
+                name: "Room 101".to_string(),
+                room_type: "ward".to_string(),
+                map_x: 0.5,
+                map_y: 0.5,
+            },
+        )
+        .unwrap();
+        let bed = bed_service::create_bed(
+            &mut conn,
+            ACTOR_USER_ID,
+            &CreateBedInput {
+                room_id: room.id,
+                label: "A".to_string(),
+            },
+        )
+        .unwrap();
+        let assignment = bed_service::assign(
+            &mut conn,
+            ACTOR_USER_ID,
+            &AssignBedInput {
+                bed_id: bed.id,
+                patient_id: 1,
+                encounter_id: encounter.id,
+            },
+        )
+        .unwrap();
+
+        discharge_encounter(
+            &mut conn,
+            ACTOR_USER_ID,
+            &DischargeEncounterInput {
+                encounter_id: encounter.id,
+                discharge_summary: None,
+            },
+        )
+        .unwrap();
+
+        let assignments = bed_service::list_assignments_for_encounter(&conn, encounter.id).unwrap();
+        let released = assignments
+            .iter()
+            .find(|found| found.id == assignment.id)
+            .unwrap();
+        assert!(released.released_at.is_some());
+
+        let updated_bed = bed_repository::find_bed_by_id(&conn, bed.id)
+            .unwrap()
+            .unwrap();
+        assert_eq!(updated_bed.status, "available");
+
+        let rows = audit_repository::list_all_ordered(&conn).unwrap();
+        assert!(rows.iter().any(|row| row.action == "bed.release"));
+        assert!(rows.iter().any(|row| row.action == "encounter.discharge"));
+    }
+
+    #[test]
     fn discharging_an_already_discharged_encounter_returns_conflict() {
         let dir = tempdir().unwrap();
         let mut conn = open_migrated(dir.path());
