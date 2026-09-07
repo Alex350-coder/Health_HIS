@@ -1,14 +1,11 @@
-import { useState } from 'react';
-
 import { Badge } from '@shared/ui/Badge';
-import { Button } from '@shared/ui/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@shared/ui/Card';
 
 import { useInventoryItemsList } from '@modules/inventory/api/inventory-queries';
 
 import { DiagnosisForm } from './DiagnosisForm';
 import { DiagnosisList } from './DiagnosisList';
-import { DischargeForm } from './DischargeForm';
+import { DischargeDialog } from './DischargeDialog';
 import { EvolutionForm } from './EvolutionForm';
 import { EvolutionList } from './EvolutionList';
 import { TreatmentForm } from './TreatmentForm';
@@ -21,6 +18,7 @@ interface EncounterPanelProps {
   diagnoses: Diagnosis[];
   treatments: Treatment[];
   evolutions: Evolution[];
+  patientId: number;
 }
 
 /** Timeline + inline forms for the currently open encounter. */
@@ -29,9 +27,8 @@ export function EncounterPanel({
   diagnoses,
   treatments,
   evolutions,
+  patientId,
 }: EncounterPanelProps): JSX.Element {
-  const [isDischarging, setIsDischarging] = useState(false);
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -45,15 +42,10 @@ export function EncounterPanel({
         diagnoses={diagnoses}
         treatments={treatments}
         evolutions={evolutions}
+        patientId={patientId}
       />
       <CardFooter>
-        {isDischarging ? (
-          <DischargeForm encounterId={encounter.id} onDone={() => setIsDischarging(false)} />
-        ) : (
-          <Button intent="danger" size="sm" onClick={() => setIsDischarging(true)}>
-            Discharge
-          </Button>
-        )}
+        <DischargeDialog encounterId={encounter.id} patientId={patientId} />
       </CardFooter>
     </Card>
   );
