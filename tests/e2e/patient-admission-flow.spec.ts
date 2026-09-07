@@ -113,4 +113,43 @@ describe('Patient admission flow — through discharge', () => {
     const occupiedCount = $('dt=Occupied').parentElement().$('dd');
     await expect(occupiedCount).toHaveText('1');
   });
+
+  it('registers a diagnosis', async () => {
+    await browser.url('/patients/1/medical-history');
+
+    await $('#diagnosis-description').setValue('Acute appendicitis');
+    await $('#diagnosis-icd-code').setValue('K35.80');
+    await $('button=Add diagnosis').click();
+
+    await expect($('*=Acute appendicitis')).toBeDisplayed();
+  });
+
+  it('registers a treatment that also consumes inventory stock', async () => {
+    await browser.url('/inventory/1');
+
+    await $('button=Record transaction').click();
+    await $('#inventory-transaction-quantity-delta').setValue('20');
+    await $('button=Record').click();
+    await expect($('*=20')).toBeDisplayed();
+
+    await browser.url('/patients/1/medical-history');
+
+    await $('#treatment-description').setValue('Appendectomy');
+    await $('#treatment-dosage').setValue('N/A');
+    await $('#treatment-diagnosis').selectByAttribute('value', '1');
+    await $('#treatment-inventory-item').selectByAttribute('value', '1');
+    await $('#treatment-inventory-quantity').setValue('3');
+    await $('button=Add treatment').click();
+
+    await expect($('*=Appendectomy')).toBeDisplayed();
+  });
+
+  it('records an evolution note', async () => {
+    await browser.url('/patients/1/medical-history');
+
+    await $('#evolution-note').setValue('Patient stable post-op, vitals normal.');
+    await $('button=Add note').click();
+
+    await expect($('*=Patient stable post-op, vitals normal.')).toBeDisplayed();
+  });
 });
