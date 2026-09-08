@@ -1,0 +1,31 @@
+# cargo-audit configuration (Rules.md 5.2 exception mechanism).
+#
+# CI (.github/workflows/ci.yml Gate 7) runs `cargo audit --deny warnings`. Without this
+# file that command fails today: 0 actual vulnerabilities, but 7 `unmaintained`/`unsound`
+# RUSTSEC advisory *warnings* against dependencies pulled in transitively by Tauri's own
+# Linux GTK/glib WebView stack — not anything this project added directly, and none have
+# an upstream fix available (verified during Phase 14). This mirrors the already-documented
+# npm-audit exception for `brace-expansion` (Progress.md "Blocker 2"): devDependency/
+# build-tooling-only exposure, no upstream fix, explicitly recorded and re-checked
+# whenever the affected crate or its dependents change (Progress.md Phase 14 Deviations).
+[advisories]
+ignore = [
+    # proc-macro-error 1.0.4 — unmaintained. Pulled in transitively by Tauri's own
+    # proc-macro dependency tree. No maintained replacement is adopted upstream yet.
+    "RUSTSEC-2024-0370",
+    # unic-char-property 0.9.0 — unmaintained. Transitive dependency of Tauri's
+    # Linux WebKitGTK bindings' Unicode text-handling stack.
+    "RUSTSEC-2025-0081",
+    # unic-char-range 0.9.0 — unmaintained. Same unic-* family as above.
+    "RUSTSEC-2025-0075",
+    # unic-common 0.9.0 — unmaintained. Same unic-* family as above.
+    "RUSTSEC-2025-0080",
+    # unic-ucd-ident 0.9.0 — unmaintained. Same unic-* family as above.
+    "RUSTSEC-2025-0100",
+    # unic-ucd-version 0.9.0 — unmaintained. Same unic-* family as above.
+    "RUSTSEC-2025-0098",
+    # glib 0.18.5 — unsound Iterator/DoubleEndedIterator impl for VariantStrIter.
+    # Transitive dependency of Tauri's Linux GTK bindings (tao/wry), not called
+    # directly by any first-party code in this project.
+    "RUSTSEC-2024-0429",
+]
