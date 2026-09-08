@@ -71,24 +71,39 @@ function MedicalHistoryBody({
           diagnoses={bundle.diagnoses.filter((d) => d.encounterId === openEncounter.id)}
           treatments={bundle.treatments.filter((t) => t.encounterId === openEncounter.id)}
           evolutions={bundle.evolutions.filter((e) => e.encounterId === openEncounter.id)}
+          patientId={patientId}
         />
       ) : (
         <StartEncounterAction patientId={patientId} />
       )}
-      {pastEncounters.length > 0 ? (
-        <div className="flex flex-col gap-4">
-          <h3 className="text-base font-semibold text-text-primary">Past encounters</h3>
-          {pastEncounters.map((encounter) => (
-            <PastEncounterCard
-              key={encounter.id}
-              encounter={encounter}
-              diagnoses={bundle.diagnoses.filter((d) => d.encounterId === encounter.id)}
-              treatments={bundle.treatments.filter((t) => t.encounterId === encounter.id)}
-              evolutions={bundle.evolutions.filter((e) => e.encounterId === encounter.id)}
-            />
-          ))}
-        </div>
-      ) : null}
+      <PastEncounters bundle={bundle} pastEncounters={pastEncounters} />
+    </div>
+  );
+}
+
+function PastEncounters({
+  bundle,
+  pastEncounters,
+}: {
+  bundle: MedicalHistoryBundle;
+  pastEncounters: MedicalHistoryBundle['encounters'];
+}): JSX.Element | null {
+  if (pastEncounters.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h3 className="text-base font-semibold text-text-primary">Past encounters</h3>
+      {pastEncounters.map((encounter) => (
+        <PastEncounterCard
+          key={encounter.id}
+          encounter={encounter}
+          diagnoses={bundle.diagnoses.filter((d) => d.encounterId === encounter.id)}
+          treatments={bundle.treatments.filter((t) => t.encounterId === encounter.id)}
+          evolutions={bundle.evolutions.filter((e) => e.encounterId === encounter.id)}
+        />
+      ))}
     </div>
   );
 }

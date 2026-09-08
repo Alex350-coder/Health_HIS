@@ -8,7 +8,10 @@
 
 use health_project::db::{connection, migrator};
 use health_project::errors::AppError;
-use health_project::services::{audit_service, medical_history_service};
+use health_project::services::{audit_service, bed_service, medical_history_service};
+use health_project::validation::bed_validation::{
+    AssignBedInput, CreateBedInput, CreateFloorInput, CreateRoomInput,
+};
 use health_project::validation::medical_history_validation::{
     CreateDiagnosisInput, CreateEncounterInput, CreateEvolutionInput, CreateTreatmentInput,
     DischargeEncounterInput,
@@ -184,6 +187,89 @@ fn adding_a_diagnosis_to_a_discharged_encounter_fails() {
     );
 
     assert!(matches!(result, Err(AppError::Conflict { .. })));
+}
+
+/// Discharge must also release any bed still held for the encounter, in the same transaction as
+/// the encounter status write (Database.md Section 7, Plan.md Phase 13 Task 13.1) — composes
+/// `bed_service` with `medical_history_service` the way `billing_integration.rs` composes Billing
+/// with every other module.
+#[test]
+fn discharging_an_encounter_releases_its_bed_assignment() {
+    let dir = tempdir().unwrap();
+    let mut conn = migrated_connection(dir.path(), "discharge-releases-bed.sqlite");
+
+    let encounter = medical_history_service::create_encounter(
+        &mut conn,
+        ACTOR_USER_ID,
+        &CreateEncounterInput {
+            patient_id: PATIENT_ID,
+        },
+    )
+    .unwrap();
+
+    let floor = bed_service::create_floor(
+        &mut conn,
+        ACTOR_USER_ID,
+        &CreateFloorInput {
+            name: "Floor 1".to_string(),
+            level_order: 0,
+        },
+    )
+    .unwrap();
+    let room = bed_service::create_room(
+        &mut conn,
+        ACTOR_USER_ID,
+        &CreateRoomInput {
+            floor_id: floor.id,
+            name: "Room 101".to_string(),
+            room_type: "ward".to_string(),
+            map_x: 0.5,
+            map_y: 0.5,
+        },
+    )
+    .unwrap();
+    let bed = bed_service::create_bed(
+        &mut conn,
+        ACTOR_USER_ID,
+        &CreateBedInput {
+            room_id: room.id,
+            label: "A".to_string(),
+        },
+    )
+    .unwrap();
+    let assignment = bed_service::assign(
+        &mut conn,
+        ACTOR_USER_ID,
+        &AssignBedInput {
+            bed_id: bed.id,
+            patient_id: PATIENT_ID,
+            encounter_id: encounter.id,
+        },
+    )
+    .unwrap();
+
+    medical_history_service::discharge_encounter(
+        &mut conn,
+        ACTOR_USER_ID,
+        &DischargeEncounterInput {
+            encounter_id: encounter.id,
+            discharge_summary: Some("Recovered well.".to_string()),
+        },
+    )
+    .unwrap();
+
+    let assignments = bed_service::list_assignments_for_encounter(&conn, encounter.id).unwrap();
+    let released = assignments
+        .iter()
+        .find(|found| found.id == assignment.id)
+        .unwrap();
+    assert!(released.released_at.is_some());
+
+    let verification = audit_service::verify_chain(&conn).unwrap();
+    assert!(
+        verification.is_valid,
+        "the hash chain must still verify after a discharge that also releases a bed"
+    );
 }
 
 /// Encounter create, diagnosis create, treatment correction, evolution create, then discharge —

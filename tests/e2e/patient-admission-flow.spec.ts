@@ -3,15 +3,17 @@ import { expect } from '@wdio/globals';
 import { resetDatabase } from './support/reset-database';
 
 /**
- * Exercises the workflow chain up through bed assignment (Plan.md Phase 8 scope: "through bed
- * assignment"; Phase 13 extends this same file through discharge). Runs against the real,
- * freshly-reset SQLCipher database — no seeded/mock data (Rules.md 17.1) — so IDs are the
- * deterministic first auto-increment values (1) a clean database produces.
+ * Exercises the full patient-centered workflow chain (Testing.md Section 4 scenario 2): bed
+ * assignment (Plan.md Phase 8 scope) through diagnosis, treatment with inventory consumption,
+ * evolution, OR scheduling, billing simulation, discharge, and a post-discharge history re-query
+ * (Plan.md Phase 13 scope). Runs against the real, freshly-reset SQLCipher database — no
+ * seeded/mock data (Rules.md 17.1) — so IDs are the deterministic first auto-increment values
+ * (1) a clean database produces.
  *
  * Also validates the Phase 8 Finding A fix end-to-end: after `beds:assignment:created`, the
  * Hospital Map room-status panel reflects occupancy without a manual page reload.
  */
-describe('Patient admission flow — through bed assignment', () => {
+describe('Patient admission flow — through discharge', () => {
   before(async () => {
     resetDatabase();
     await browser.reloadSession();
@@ -45,6 +47,30 @@ describe('Patient admission flow — through bed assignment', () => {
     await $('#bed-label').setValue('Bed 101-A');
     await $('button=Add bed').click();
     await expect($('*=Bed 101-A')).toBeDisplayed();
+  });
+
+  it('promotes the room to an operating room from the facility page', async () => {
+    await browser.url('/facility');
+
+    await $('#operating-room-room-id').setValue('1');
+    await $('button=Promote to OR').click();
+    await expect($('*=Room 101')).toBeDisplayed();
+  });
+
+  it('creates an inventory category and item', async () => {
+    await browser.url('/inventory');
+
+    await $('#inventory-category-name').setValue('Consumables');
+    await $('#inventory-category-kind').selectByAttribute('value', 'supply');
+    await $('button=Add category').click();
+    await expect($('*=Consumables')).toBeDisplayed();
+
+    await $('#inventory-item-category').selectByAttribute('value', '1');
+    await $('#inventory-item-name').setValue('Gauze Pads');
+    await $('#inventory-item-unit').setValue('box');
+    await $('#inventory-item-reorder-threshold').setValue('5');
+    await $('button=Add item').click();
+    await expect($('*=Gauze Pads')).toBeDisplayed();
   });
 
   it('registers a patient', async () => {
@@ -86,5 +112,91 @@ describe('Patient admission flow — through bed assignment', () => {
     await $('[aria-label="Room 101"]').click();
     const occupiedCount = $('dt=Occupied').parentElement().$('dd');
     await expect(occupiedCount).toHaveText('1');
+  });
+
+  it('registers a diagnosis', async () => {
+    await browser.url('/patients/1/medical-history');
+
+    await $('#diagnosis-description').setValue('Acute appendicitis');
+    await $('#diagnosis-icd-code').setValue('K35.80');
+    await $('button=Add diagnosis').click();
+
+    await expect($('*=Acute appendicitis')).toBeDisplayed();
+  });
+
+  it('registers a treatment that also consumes inventory stock', async () => {
+    await browser.url('/inventory/1');
+
+    await $('button=Record transaction').click();
+    await $('#inventory-transaction-quantity-delta').setValue('20');
+    await $('button=Record').click();
+    await expect($('*=20')).toBeDisplayed();
+
+    await browser.url('/patients/1/medical-history');
+
+    await $('#treatment-description').setValue('Appendectomy');
+    await $('#treatment-dosage').setValue('N/A');
+    await $('#treatment-diagnosis').selectByAttribute('value', '1');
+    await $('#treatment-inventory-item').selectByAttribute('value', '1');
+    await $('#treatment-inventory-quantity').setValue('3');
+    await $('button=Add treatment').click();
+
+    await expect($('*=Appendectomy')).toBeDisplayed();
+  });
+
+  it('records an evolution note', async () => {
+    await browser.url('/patients/1/medical-history');
+
+    await $('#evolution-note').setValue('Patient stable post-op, vitals normal.');
+    await $('button=Add note').click();
+
+    await expect($('*=Patient stable post-op, vitals normal.')).toBeDisplayed();
+  });
+
+  it('schedules an operating room reservation', async () => {
+    await browser.url('/operating-rooms');
+
+    await $('select').selectByAttribute('value', '1');
+    await $('button=New reservation').click();
+
+    await $('#reserve-or-patient-id').setValue('1');
+    await $('#reserve-or-encounter-id').setValue('1');
+    await $('#reserve-or-procedure-description').setValue('Appendectomy');
+    await $('#reserve-or-scheduled-start').setValue('2026-01-01T08:00');
+    await $('#reserve-or-scheduled-end').setValue('2026-01-01T10:00');
+    await $('button=Reserve').click();
+
+    await expect($('*=Appendectomy')).toBeDisplayed();
+  });
+
+  it('generates and finalizes the billing simulation', async () => {
+    await browser.url('/patients/1/billing');
+
+    await $('button=Generate Simulation').click();
+    await expect($('button=Finalize')).toBeDisplayed();
+
+    await $('button=Finalize').click();
+    await expect($('*=Finalized')).toBeDisplayed();
+  });
+
+  it('discharges the encounter and releases the bed', async () => {
+    await browser.url('/patients/1/medical-history');
+
+    await $('button=Discharge').click();
+    await $('button=Confirm discharge').click();
+
+    await expect($('*=Past encounters')).toBeDisplayed();
+
+    await browser.url('/beds');
+    await expect($('button=Release')).not.toBeDisplayed();
+    await expect($('*=available')).toBeDisplayed();
+  });
+
+  it('keeps the full history queryable after discharge', async () => {
+    await browser.url('/patients/1/medical-history');
+
+    await expect($('*=Acute appendicitis')).toBeDisplayed();
+    await expect($('*=Appendectomy')).toBeDisplayed();
+    await expect($('*=Patient stable post-op, vitals normal.')).toBeDisplayed();
   });
 });
