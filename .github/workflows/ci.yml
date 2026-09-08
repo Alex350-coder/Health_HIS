@@ -121,17 +121,51 @@ jobs:
 
   e2e:
     name: End-to-End Suite
-    # Testing.md Section 7 — E2E runs on main/release branches only.
+    # Testing.md Section 7 — E2E runs on main/release branches only. `tauri-driver` proxies to
+    # the native WebView2 driver (DevelopmentWorkflow.md Section 4.1), which only exists on
+    # Windows — every other gate above runs on ubuntu-latest, this job alone runs on Windows.
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
     needs: quality-gate
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run E2E suite
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --locked
+
+      # windows-latest ships an Edge/WebView2 runtime whose major version drifts over time;
+      # fetch the matching msedgedriver rather than pinning a version (Microsoft doesn't
+      # publish a "latest" alias, so the installed runtime's own version is queried first).
+      - name: Install matching msedgedriver
+        shell: pwsh
         run: |
-          if [ -d tests/e2e ] && [ -n "$(ls -A tests/e2e 2>/dev/null)" ]; then
-            echo "::error::tests/e2e exists but no runner is wired yet."
-            exit 1
-          fi
-          echo "::notice::No E2E specs yet — first scenarios land per Testing.md Section 4."
+          $edgeVersion = (Get-Item (Get-Command msedge -ErrorAction SilentlyContinue).Source -ErrorAction SilentlyContinue).VersionInfo.ProductVersion
+          if (-not $edgeVersion) {
+            $edgeVersion = (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}' -ErrorAction SilentlyContinue).pv
+          }
+          if (-not $edgeVersion) {
+            throw "Could not determine the installed Edge/WebView2 version on this runner."
+          }
+          Write-Host "Detected Edge/WebView2 version: $edgeVersion"
+          Invoke-WebRequest -Uri "https://msedgedriver.azureedge.net/$edgeVersion/edgedriver_win64.zip" -OutFile edgedriver.zip
+          Expand-Archive edgedriver.zip -DestinationPath edgedriver
+          $dest = "$env:USERPROFILE\.cargo\bin"
+          Copy-Item edgedriver\msedgedriver.exe $dest -Force
+
+      - name: Run E2E suite
+        run: npm run test:e2e
