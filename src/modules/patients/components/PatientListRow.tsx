@@ -22,7 +22,7 @@ export function PatientListRow({ patient, onSelect }: PatientListRowProps): JSX.
   return (
     <>
       <td
-        className="cursor-pointer p-3 align-middle"
+        className="w-[15%] cursor-pointer truncate p-3 align-middle"
         role="button"
         tabIndex={0}
         aria-label={`View patient ${patient.fullName}`}
@@ -31,13 +31,16 @@ export function PatientListRow({ patient, onSelect }: PatientListRowProps): JSX.
       >
         {patient.medicalRecordNumber}
       </td>
-      <td className="cursor-pointer p-3 align-middle" onClick={onSelect}>
+      <td className="w-[40%] cursor-pointer truncate p-3 align-middle" onClick={onSelect}>
         {patient.fullName}
       </td>
-      <td className="cursor-pointer p-3 align-middle" onClick={onSelect}>
+      <td className="w-[25%] cursor-pointer truncate p-3 align-middle" onClick={onSelect}>
         {patient.dateOfBirth}
       </td>
-      <td className="cursor-pointer p-3 align-middle capitalize" onClick={onSelect}>
+      <td
+        className="w-[20%] cursor-pointer truncate p-3 align-middle capitalize"
+        onClick={onSelect}
+      >
         {patient.sex}
       </td>
     </>
