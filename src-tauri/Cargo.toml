@@ -5,6 +5,10 @@ description = "Hospital Information System — secure, offline-first desktop MVP
 edition = "2021"
 rust-version = "1.77"
 publish = false
+# Tauri's dev/build commands invoke plain `cargo run`/`cargo build` with no `--bin` flag; without
+# this, adding the `dev_seed` binary target made that ambiguous. `dev_seed` is still runnable
+# explicitly via `cargo run --bin dev_seed -- <args>`.
+default-run = "health-project"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
