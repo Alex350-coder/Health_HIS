@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import { formErrorMessage } from '@shared/errors/error-messages';
 import { Button } from '@shared/ui/Button';
 import { FormField } from '@shared/ui/FormField';
+import { Input } from '@shared/ui/Input';
+import { selectClassName } from '@shared/ui/select-class-name';
 
 import { useCreateInventoryItem } from '../api/inventory-mutations';
 import {
@@ -31,7 +33,11 @@ function CreateInventoryItemIdentityFields({
   return (
     <>
       <FormField id="inventory-item-category" label="Category" error={errors.categoryId?.message}>
-        <select id="inventory-item-category" {...register('categoryId')}>
+        <select
+          id="inventory-item-category"
+          className={selectClassName}
+          {...register('categoryId')}
+        >
           <option value="">Select a category…</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
@@ -41,10 +47,10 @@ function CreateInventoryItemIdentityFields({
         </select>
       </FormField>
       <FormField id="inventory-item-name" label="Name" error={errors.name?.message}>
-        <input id="inventory-item-name" type="text" {...register('name')} />
+        <Input id="inventory-item-name" type="text" {...register('name')} />
       </FormField>
       <FormField id="inventory-item-unit" label="Unit" error={errors.unit?.message}>
-        <input id="inventory-item-unit" type="text" {...register('unit')} />
+        <Input id="inventory-item-unit" type="text" {...register('unit')} />
       </FormField>
     </>
   );
@@ -64,7 +70,7 @@ function CreateInventoryItemStockFields({
         label="Reorder threshold"
         error={errors.reorderThreshold?.message}
       >
-        <input
+        <Input
           id="inventory-item-reorder-threshold"
           type="number"
           min={0}
@@ -76,10 +82,10 @@ function CreateInventoryItemStockFields({
         label="Expiration date"
         error={errors.expirationDate?.message}
       >
-        <input id="inventory-item-expiration-date" type="date" {...register('expirationDate')} />
+        <Input id="inventory-item-expiration-date" type="date" {...register('expirationDate')} />
       </FormField>
       <FormField id="inventory-item-location" label="Location" error={errors.location?.message}>
-        <input id="inventory-item-location" type="text" {...register('location')} />
+        <Input id="inventory-item-location" type="text" {...register('location')} />
       </FormField>
     </>
   );
@@ -104,7 +110,12 @@ export function CreateInventoryItemForm({ categories }: CreateInventoryItemFormP
   const errorMessage = formErrorMessage(createItem.error);
 
   return (
-    <form onSubmit={(event) => void onSubmit(event)} noValidate aria-label="Add inventory item">
+    <form
+      onSubmit={(event) => void onSubmit(event)}
+      noValidate
+      aria-label="Add inventory item"
+      className="flex flex-col gap-4"
+    >
       <CreateInventoryItemIdentityFields
         register={register}
         errors={errors}
