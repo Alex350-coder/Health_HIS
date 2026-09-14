@@ -82,4 +82,50 @@ describe('HospitalMapPage', () => {
     expect(screen.queryByRole('button', { name: /Update/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
+
+  it('shows a floor summary in the right column before any room is selected', async () => {
+    mockedInvoke.mockResolvedValueOnce(LAYOUT);
+    renderWithQueryClient(<HospitalMapPage />);
+
+    expect(await screen.findByRole('button', { name: 'Ward A' })).toBeInTheDocument();
+    expect(screen.getByText('Select a room to see its beds.')).toBeInTheDocument();
+  });
+
+  it('shows only one floor at a time and switches floors with the arrow controls', async () => {
+    const user = userEvent.setup();
+    const TWO_FLOORS = [
+      LAYOUT[0],
+      {
+        id: 2,
+        name: 'Second Floor',
+        levelOrder: 1,
+        createdAt: '2026-01-01T00:00:00Z',
+        rooms: [
+          {
+            id: 2,
+            floorId: 2,
+            name: 'Ward B',
+            roomType: 'ward',
+            mapX: 0.5,
+            mapY: 0.5,
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+        ],
+      },
+    ];
+    mockedInvoke.mockResolvedValueOnce(TWO_FLOORS);
+    renderWithQueryClient(<HospitalMapPage />);
+
+    expect(await screen.findByRole('button', { name: 'Ward A' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ward B' })).not.toBeInTheDocument();
+    expect(screen.getByText('Floor 1 of 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous floor' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Next floor' }));
+
+    expect(await screen.findByRole('button', { name: 'Ward B' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ward A' })).not.toBeInTheDocument();
+    expect(screen.getByText('Floor 2 of 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next floor' })).toBeDisabled();
+  });
 });

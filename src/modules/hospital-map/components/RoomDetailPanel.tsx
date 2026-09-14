@@ -1,4 +1,5 @@
 import { Badge } from '@shared/ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@shared/ui/Card';
 import { EmptyState } from '@shared/ui/EmptyState';
 import { ErrorState } from '@shared/ui/ErrorState';
 import { Skeleton } from '@shared/ui/Skeleton';
@@ -18,18 +19,18 @@ const BED_STATUS_INTENT: Record<Bed['status'], 'success' | 'warning' | 'info'> =
 function RoomOccupancySummary({ data }: { data: RoomStatus }): JSX.Element {
   const { availableCount, occupiedCount, maintenanceCount } = data;
   return (
-    <dl className="flex gap-4 text-sm">
-      <div>
+    <dl className="grid grid-cols-3 gap-2 text-sm">
+      <div className="flex flex-col items-center rounded-md border border-border-default p-3">
         <dt className="text-text-secondary">Available</dt>
-        <dd>{availableCount}</dd>
+        <dd className="text-lg font-semibold text-text-primary">{availableCount}</dd>
       </div>
-      <div>
+      <div className="flex flex-col items-center rounded-md border border-border-default p-3">
         <dt className="text-text-secondary">Occupied</dt>
-        <dd>{occupiedCount}</dd>
+        <dd className="text-lg font-semibold text-text-primary">{occupiedCount}</dd>
       </div>
-      <div>
+      <div className="flex flex-col items-center rounded-md border border-border-default p-3">
         <dt className="text-text-secondary">Maintenance</dt>
-        <dd>{maintenanceCount}</dd>
+        <dd className="text-lg font-semibold text-text-primary">{maintenanceCount}</dd>
       </div>
     </dl>
   );
@@ -40,10 +41,13 @@ function RoomBedsList({ beds }: { beds: Bed[] }): JSX.Element {
     return <EmptyState title="No beds in this room" />;
   }
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="grid grid-cols-2 gap-2">
       {beds.map((bed) => (
-        <li key={bed.id} className="flex items-center gap-2">
-          <span>{bed.label}</span>
+        <li
+          key={bed.id}
+          className="flex items-center justify-between gap-2 rounded-md border border-border-default p-2"
+        >
+          <span className="text-sm text-text-primary">{bed.label}</span>
           <Badge status={BED_STATUS_INTENT[bed.status]}>{bed.status}</Badge>
         </li>
       ))}
@@ -56,7 +60,7 @@ export function RoomDetailPanel({ roomId }: { roomId: number }): JSX.Element {
   const query = useRoomStatus(roomId);
 
   if (query.isLoading) {
-    return <Skeleton className="h-40 w-full" />;
+    return <Skeleton className="h-40 w-full flex-1" />;
   }
   if (query.isError) {
     return (
@@ -68,14 +72,17 @@ export function RoomDetailPanel({ roomId }: { roomId: number }): JSX.Element {
   }
 
   return (
-    <aside
-      aria-label={`${query.data.room.name} details`}
-      className="flex flex-col gap-3 rounded-lg border border-border-default p-4"
-    >
-      <h2 className="text-base font-semibold text-text-primary">{query.data.room.name}</h2>
-      <p className="text-sm text-text-secondary">{query.data.room.roomType}</p>
-      <RoomOccupancySummary data={query.data} />
-      <RoomBedsList beds={query.data.beds} />
-    </aside>
+    <Card aria-label={`${query.data.room.name} details`} className="flex-1">
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>{query.data.room.name}</CardTitle>
+        <Badge status="neutral" className="capitalize">
+          {query.data.room.roomType}
+        </Badge>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <RoomOccupancySummary data={query.data} />
+        <RoomBedsList beds={query.data.beds} />
+      </CardContent>
+    </Card>
   );
 }
