@@ -2,8 +2,10 @@
 //!
 //! Never referenced by `main.rs`, `lib.rs`, or `invoke_handler` — this binary cannot ship with
 //! the application and cannot run automatically. It opens the *real* SQLCipher database (same
-//! key, same connection settings as production) and executes plain `INSERT` statements directly
-//! against it, bypassing the command/service layers entirely, per explicit user request.
+//! key, same connection settings as production), applies the same embedded migrations `lib.rs`
+//! runs on startup (so it also works against a brand-new, empty database file), and executes
+//! plain `INSERT` statements directly against it, bypassing the command/service layers entirely,
+//! per explicit user request.
 //!
 //! Usage: `cargo run --bin dev-seed -- <path-to-health.db> [--force]`
 //! Windows dev path: `%APPDATA%\com.healthproject.his\health.db`
@@ -12,7 +14,7 @@ use std::env;
 use std::path::Path;
 use std::process::ExitCode;
 
-use health_project::db::connection;
+use health_project::db::{connection, migrator};
 use health_project::security::{hashing, secrets};
 
 const DEV_SEED_PASSWORD: &str = "Dev-Seed-2026!";
@@ -35,6 +37,8 @@ fn main() -> ExitCode {
 fn run(db_path: &Path, force: bool) -> Result<(), String> {
     let key = secrets::get_or_create_db_key().map_err(|error| error.to_string())?;
     let mut conn = connection::open(db_path, &key).map_err(|error| error.to_string())?;
+    migrator::run_migrations(&conn, migrator::embedded_migrations())
+        .map_err(|error| error.to_string())?;
 
     let existing_patients: i64 = conn
         .query_row("SELECT COUNT(*) FROM patients", [], |row| row.get(0))
