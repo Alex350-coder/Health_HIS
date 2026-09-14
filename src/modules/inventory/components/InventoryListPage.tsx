@@ -20,11 +20,15 @@ import type { UseQueryResult } from '@tanstack/react-query';
 function renderHeader(): JSX.Element {
   return (
     <tr>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">Name</th>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">Quantity</th>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">Reorder threshold</th>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">Expiration</th>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">Status</th>
+      <th className="w-[30%] p-3 text-left text-sm font-semibold text-text-secondary">Name</th>
+      <th className="w-[15%] p-3 text-left text-sm font-semibold text-text-secondary">Quantity</th>
+      <th className="w-[20%] p-3 text-left text-sm font-semibold text-text-secondary">
+        Reorder threshold
+      </th>
+      <th className="w-[20%] p-3 text-left text-sm font-semibold text-text-secondary">
+        Expiration
+      </th>
+      <th className="w-[15%] p-3 text-left text-sm font-semibold text-text-secondary">Status</th>
     </tr>
   );
 }

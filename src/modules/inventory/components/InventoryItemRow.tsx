@@ -25,7 +25,7 @@ export function InventoryItemRow({ item, onSelect }: InventoryItemRowProps): JSX
   return (
     <>
       <td
-        className="cursor-pointer p-3 align-middle"
+        className="w-[30%] cursor-pointer truncate p-3 align-middle"
         role="button"
         tabIndex={0}
         aria-label={`View inventory item ${item.name}`}
@@ -34,16 +34,16 @@ export function InventoryItemRow({ item, onSelect }: InventoryItemRowProps): JSX
       >
         {item.name}
       </td>
-      <td className="cursor-pointer p-3 align-middle" onClick={onSelect}>
+      <td className="w-[15%] cursor-pointer truncate p-3 align-middle" onClick={onSelect}>
         {item.quantity} {item.unit}
       </td>
-      <td className="cursor-pointer p-3 align-middle" onClick={onSelect}>
+      <td className="w-[20%] cursor-pointer truncate p-3 align-middle" onClick={onSelect}>
         {item.reorderThreshold}
       </td>
-      <td className="cursor-pointer p-3 align-middle" onClick={onSelect}>
+      <td className="w-[20%] cursor-pointer truncate p-3 align-middle" onClick={onSelect}>
         {item.expirationDate ?? '—'}
       </td>
-      <td className="cursor-pointer p-3 align-middle" onClick={onSelect}>
+      <td className="w-[15%] cursor-pointer truncate p-3 align-middle" onClick={onSelect}>
         {isLowStock ? (
           <Badge status="warning">Low stock</Badge>
         ) : (
