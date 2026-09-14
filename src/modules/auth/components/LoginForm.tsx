@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useForm, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
 import { AccountLockedDialog } from '@shared/components/AccountLockedDialog';
-import { accountLockedRetrySecs, formErrorMessage } from '@shared/errors/error-messages';
+import { accountLockedRetrySecs, loginErrorMessage } from '@shared/errors/error-messages';
 import { Button } from '@shared/ui/Button';
 import { FormField } from '@shared/ui/FormField';
 import { Input } from '@shared/ui/Input';
@@ -44,7 +44,7 @@ function LoginFields({
 }
 
 function LoginStatus({ login }: { login: ReturnType<typeof useLogin> }): JSX.Element {
-  const errorMessage = formErrorMessage(login.error);
+  const errorMessage = loginErrorMessage(login.error);
   const retryAfterSecs = accountLockedRetrySecs(login.error);
 
   return (

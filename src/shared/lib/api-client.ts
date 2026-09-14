@@ -16,6 +16,15 @@ export function setUnauthorizedHandler(handler: () => void): void {
 }
 
 /**
+ * `auth_login`/`auth_bootstrap_admin` are reachable with no session (CLAUDE.md Constraint 4) and
+ * reuse `Unauthorized` to mean "wrong credentials," not "your existing session expired" — there
+ * is no session to expire on those screens. Firing the global redirect for them would bounce the
+ * user to `/login` while already on `/login`/`/setup`, which is where this surfaced as a
+ * misleading "Your session has expired" message on a plain failed login attempt.
+ */
+const UNAUTHORIZED_REDIRECT_EXEMPT_COMMANDS = new Set(['auth_login', 'auth_bootstrap_admin']);
+
+/**
  * The one place every IPC call in the app goes through. Normalizes whatever `invoke` rejects
  * with into an `AppError`, and centrally handles `Unauthorized` (Rule: no ad hoc per-component
  * handling of session expiry).
@@ -25,7 +34,7 @@ export async function callCommand<T>(command: string, args?: Record<string, unkn
     return await invoke<T>(command, args);
   } catch (error) {
     const appError = normalizeError(error);
-    if (appError.type === 'Unauthorized') {
+    if (appError.type === 'Unauthorized' && !UNAUTHORIZED_REDIRECT_EXEMPT_COMMANDS.has(command)) {
       onUnauthorized?.();
     }
     throw new AppErrorException(appError);

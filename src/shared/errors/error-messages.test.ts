@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { AppErrorException } from './app-error';
-import { mutationErrorMessage, toUserMessage } from './error-messages';
+import { loginErrorMessage, mutationErrorMessage, toUserMessage } from './error-messages';
 
 describe('toUserMessage', () => {
   it('returns the message for a Validation error', () => {
@@ -64,5 +64,27 @@ describe('mutationErrorMessage', () => {
 
   it('returns undefined when there is no error', () => {
     expect(mutationErrorMessage(undefined)).toBeUndefined();
+  });
+});
+
+describe('loginErrorMessage', () => {
+  it('returns an invalid-credentials message for Unauthorized, not the session-expiry text', () => {
+    const error = new AppErrorException({ type: 'Unauthorized' });
+
+    expect(loginErrorMessage(error)).toBe('Invalid username or password.');
+  });
+
+  it('falls back to formErrorMessage for other inline-eligible error types', () => {
+    const error = new AppErrorException({
+      type: 'Validation',
+      field: 'username',
+      message: 'Username is required.',
+    });
+
+    expect(loginErrorMessage(error)).toBe('Username is required.');
+  });
+
+  it('returns undefined for a non-AppErrorException value', () => {
+    expect(loginErrorMessage(new Error('plain error'))).toBeUndefined();
   });
 });
