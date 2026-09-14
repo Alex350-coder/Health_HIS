@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import { formErrorMessage } from '@shared/errors/error-messages';
 import { Button } from '@shared/ui/Button';
 import { FormField } from '@shared/ui/FormField';
+import { Input } from '@shared/ui/Input';
+import { selectClassName } from '@shared/ui/select-class-name';
 
 import { useCreateInventoryCategory } from '../api/inventory-mutations';
 import {
@@ -32,12 +34,17 @@ export function CreateInventoryCategoryForm(): JSX.Element {
   const errorMessage = formErrorMessage(createCategory.error);
 
   return (
-    <form onSubmit={(event) => void onSubmit(event)} noValidate aria-label="Add inventory category">
+    <form
+      onSubmit={(event) => void onSubmit(event)}
+      noValidate
+      aria-label="Add inventory category"
+      className="flex flex-col gap-4"
+    >
       <FormField id="inventory-category-name" label="Category name" error={errors.name?.message}>
-        <input id="inventory-category-name" type="text" {...register('name')} />
+        <Input id="inventory-category-name" type="text" {...register('name')} />
       </FormField>
       <FormField id="inventory-category-kind" label="Kind" error={errors.kind?.message}>
-        <select id="inventory-category-kind" {...register('kind')}>
+        <select id="inventory-category-kind" className={selectClassName} {...register('kind')}>
           {INVENTORY_CATEGORY_KINDS.map((kind) => (
             <option key={kind} value={kind}>
               {kind}

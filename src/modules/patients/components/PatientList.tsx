@@ -30,10 +30,12 @@ function useDebouncedValue(value: string, delayMs: number): string {
 function renderHeader(): JSX.Element {
   return (
     <tr>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">MRN</th>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">Full name</th>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">Date of birth</th>
-      <th className="p-3 text-left text-sm font-semibold text-text-secondary">Sex</th>
+      <th className="w-[15%] p-3 text-left text-sm font-semibold text-text-secondary">MRN</th>
+      <th className="w-[40%] p-3 text-left text-sm font-semibold text-text-secondary">Full name</th>
+      <th className="w-[25%] p-3 text-left text-sm font-semibold text-text-secondary">
+        Date of birth
+      </th>
+      <th className="w-[20%] p-3 text-left text-sm font-semibold text-text-secondary">Sex</th>
     </tr>
   );
 }

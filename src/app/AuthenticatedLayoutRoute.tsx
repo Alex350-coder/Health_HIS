@@ -1,4 +1,4 @@
-import { Outlet } from '@tanstack/react-router';
+import { Outlet, useNavigate } from '@tanstack/react-router';
 
 import { AuthenticatedLayout } from '@shared/components/AuthenticatedLayout';
 
@@ -15,9 +15,15 @@ export function AuthenticatedLayoutRoute(): JSX.Element {
   const clearSession = useSessionStore((state) => state.clearSession);
   const logout = useLogout();
   const unreadNotifications = useNotificationsList({ unreadOnly: true });
+  const navigate = useNavigate();
 
   const handleLogout = (): void => {
-    logout.mutate(undefined, { onSuccess: () => clearSession() });
+    logout.mutate(undefined, {
+      onSuccess: () => {
+        clearSession();
+        void navigate({ to: '/login' });
+      },
+    });
   };
 
   return (

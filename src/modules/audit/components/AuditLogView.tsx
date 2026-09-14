@@ -1,4 +1,5 @@
 import { mutationErrorMessage } from '@shared/errors/error-messages';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@shared/ui/Table';
 
 import { useAuditList } from '../api/audit-queries';
 
@@ -12,8 +13,8 @@ export function AuditLogView(): JSX.Element {
   const auditList = useAuditList({ limit: DEFAULT_PAGE_SIZE, offset: 0 });
 
   return (
-    <section aria-label="Audit log">
-      <h2>Audit log</h2>
+    <section aria-label="Audit log" className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold text-text-primary">Audit log</h1>
       <IntegrityCheck />
 
       {auditList.isLoading ? <p aria-busy="true">Loading audit entries…</p> : null}
@@ -27,22 +28,22 @@ export function AuditLogView(): JSX.Element {
       {auditList.isSuccess && auditList.data.length === 0 ? <p>No audit entries yet.</p> : null}
 
       {auditList.isSuccess && auditList.data.length > 0 ? (
-        <table>
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>User</th>
-              <th>Action</th>
-              <th>Entity</th>
-              <th>Result</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Timestamp</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead>Action</TableHead>
+              <TableHead>Entity</TableHead>
+              <TableHead>Result</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {auditList.data.map((entry) => (
               <AuditLogRow key={entry.id} entry={entry} />
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       ) : null}
     </section>
   );

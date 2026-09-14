@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastRegion } from '@shared/components/ToastRegion';
-import { renderWithQueryClient } from '@shared/test/render-with-query-client';
+import { renderWithRouterAndQueryClient } from '@shared/test/render-with-router';
 
 import { useSessionStore } from '../hooks/use-session-store';
 
@@ -22,9 +22,9 @@ describe('BootstrapForm', () => {
 
   it('shows validation errors when submitted empty', async () => {
     const user = userEvent.setup();
-    renderWithQueryClient(<BootstrapForm />);
+    renderWithRouterAndQueryClient(<BootstrapForm />);
 
-    await user.click(screen.getByRole('button', { name: 'Create administrator account' }));
+    await user.click(await screen.findByRole('button', { name: 'Create administrator account' }));
 
     expect(await screen.findByText('Full name is required.')).toBeInTheDocument();
     expect(mockedInvoke).not.toHaveBeenCalled();
@@ -42,9 +42,12 @@ describe('BootstrapForm', () => {
       updatedAt: null,
     };
     mockedInvoke.mockResolvedValueOnce({ token: 'bootstrap-token', user: adminUser });
-    renderWithQueryClient(<BootstrapForm />);
+    renderWithRouterAndQueryClient(<BootstrapForm />, {
+      initialPath: '/setup',
+      destinationPath: '/',
+    });
 
-    await user.type(screen.getByLabelText('Full name'), 'Ada Lovelace');
+    await user.type(await screen.findByLabelText('Full name'), 'Ada Lovelace');
     await user.type(screen.getByLabelText('Username'), 'ada.admin');
     await user.type(screen.getByLabelText('Password'), 'Sup3r-Secret-Pass');
     await user.click(screen.getByRole('button', { name: 'Create administrator account' }));
@@ -60,27 +63,30 @@ describe('BootstrapForm', () => {
         role: 'admin',
       },
     });
+    expect(await screen.findByText('destination reached')).toBeInTheDocument();
   });
 
-  it('shows a toast with the server error message on a failed bootstrap', async () => {
+  it('shows a toast with the server error message on a failed bootstrap and does not navigate', async () => {
     const user = userEvent.setup();
     mockedInvoke.mockRejectedValueOnce({
       type: 'Conflict',
       message: 'an administrator already exists',
     });
-    renderWithQueryClient(
+    renderWithRouterAndQueryClient(
       <>
         <BootstrapForm />
         <ToastRegion />
       </>,
+      { initialPath: '/setup', destinationPath: '/' },
     );
 
-    await user.type(screen.getByLabelText('Full name'), 'Ada Lovelace');
+    await user.type(await screen.findByLabelText('Full name'), 'Ada Lovelace');
     await user.type(screen.getByLabelText('Username'), 'ada.admin');
     await user.type(screen.getByLabelText('Password'), 'Sup3r-Secret-Pass');
     await user.click(screen.getByRole('button', { name: 'Create administrator account' }));
 
     expect(await screen.findByText('an administrator already exists')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('destination reached')).not.toBeInTheDocument();
   });
 });

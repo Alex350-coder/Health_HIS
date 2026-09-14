@@ -1,8 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigate } from '@tanstack/react-router';
 import { useForm, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 
 import { formErrorMessage } from '@shared/errors/error-messages';
+import { Button } from '@shared/ui/Button';
 import { FormField } from '@shared/ui/FormField';
+import { Input } from '@shared/ui/Input';
 
 import { useBootstrapAdmin } from '../api/auth-mutations';
 import { useSessionStore } from '../hooks/use-session-store';
@@ -48,14 +51,36 @@ function BootstrapFields({
           label={field.label}
           error={errors[field.name]?.message}
         >
-          <input
+          <Input
             id={field.id}
             type={field.type}
             autoComplete={field.autoComplete}
+            aria-invalid={errors[field.name] !== undefined}
             {...register(field.name)}
           />
         </FormField>
       ))}
+    </>
+  );
+}
+
+function BootstrapStatus({
+  bootstrapAdmin,
+}: {
+  bootstrapAdmin: ReturnType<typeof useBootstrapAdmin>;
+}): JSX.Element {
+  const errorMessage = formErrorMessage(bootstrapAdmin.error);
+
+  return (
+    <>
+      {errorMessage ? (
+        <p role="alert" className="text-sm text-danger">
+          {errorMessage}
+        </p>
+      ) : null}
+      <Button type="submit" disabled={bootstrapAdmin.isPending} className="w-full">
+        {bootstrapAdmin.isPending ? 'Creating administrator…' : 'Create administrator account'}
+      </Button>
     </>
   );
 }
@@ -75,29 +100,27 @@ export function BootstrapForm(): JSX.Element {
   });
   const bootstrapAdmin = useBootstrapAdmin();
   const setSession = useSessionStore((state) => state.setSession);
+  const navigate = useNavigate();
 
   const onSubmit = handleSubmit((input) => {
     bootstrapAdmin.mutate(input, {
       onSuccess: (response) => {
         setSession(response.token, response.user);
+        void navigate({ to: '/' });
       },
     });
   });
-
-  const errorMessage = formErrorMessage(bootstrapAdmin.error);
 
   return (
     <form
       onSubmit={(event) => void onSubmit(event)}
       noValidate
       aria-label="Create the first administrator account"
+      className="flex flex-col gap-4"
     >
       <BootstrapFields register={register} errors={errors} />
       <input type="hidden" value="admin" {...register('role')} />
-      {errorMessage ? <p role="alert">{errorMessage}</p> : null}
-      <button type="submit" disabled={bootstrapAdmin.isPending}>
-        {bootstrapAdmin.isPending ? 'Creating administrator…' : 'Create administrator account'}
-      </button>
+      <BootstrapStatus bootstrapAdmin={bootstrapAdmin} />
     </form>
   );
 }

@@ -77,6 +77,18 @@ describe('callCommand', () => {
     await expect(callCommand('auth_create_user')).rejects.toBeInstanceOf(AppErrorException);
     expect(handler).not.toHaveBeenCalled();
   });
+
+  it.each(['auth_login', 'auth_bootstrap_admin'])(
+    'does not invoke the unauthorized handler when %s reports Unauthorized (wrong credentials, not an expired session)',
+    async (command) => {
+      const handler = vi.fn();
+      setUnauthorizedHandler(handler);
+      mockedInvoke.mockRejectedValueOnce({ type: 'Unauthorized' });
+
+      await expect(callCommand(command)).rejects.toBeInstanceOf(AppErrorException);
+      expect(handler).not.toHaveBeenCalled();
+    },
+  );
 });
 
 afterEach(() => {

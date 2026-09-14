@@ -21,6 +21,19 @@ export function formErrorMessage(error: unknown): string | undefined {
   return toUserMessage(error.appError);
 }
 
+/**
+ * Like {@link formErrorMessage}, but overrides `Unauthorized` for the login form specifically:
+ * `auth_login` reuses that variant to mean "wrong username or password" (there is no prior
+ * session to expire on the login screen itself), so the generic session-expiry wording is
+ * actively misleading here.
+ */
+export function loginErrorMessage(error: unknown): string | undefined {
+  if (error instanceof AppErrorException && error.appError.type === 'Unauthorized') {
+    return 'Invalid username or password.';
+  }
+  return formErrorMessage(error);
+}
+
 /** Extracts `retryAfterSecs` from an `AccountLocked` error, or `undefined` otherwise. */
 export function accountLockedRetrySecs(error: unknown): number | undefined {
   if (error instanceof AppErrorException && error.appError.type === 'AccountLocked') {
